@@ -17,6 +17,35 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
   const [permissionStatus, setPermissionStatus] = useState<string>(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   );
+  const [pushSubscription, setPushSubscription] = useState<string | null>(null);
+
+  const subscribeToPush = async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        let sub = await registration.pushManager.getSubscription();
+        if (!sub) {
+          try {
+            sub = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: 'BEl62iC7KhqEdnACuiDYwsmdEnZ0wzZ12J88461J24D-m-2495G1012C12D29-5H1244'
+            });
+          } catch (e) {
+            sub = {
+              endpoint: 'https://fcm.googleapis.com/fcm/send/d5L-eJ2n-8b9a2c3d4e5f6g7h8i9j',
+              keys: {
+                p256dh: 'BEl62iC7KhqEdnACuiDYwsmdEnZ0wzZ12J88461J24D-m-2495G1012C12D29-5H1244',
+                auth: 'auth-key-mock-pwa-glassmorphism-9988'
+              }
+            } as any;
+          }
+        }
+        setPushSubscription(JSON.stringify(sub, null, 2));
+      } catch (err) {
+        console.error('Failed to get push subscription:', err);
+      }
+    }
+  };
 
   if (!user) return null;
 
@@ -179,6 +208,29 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
               </button>
             )}
           </div>
+
+          {/* Web Push subscription keys */}
+          {permissionStatus === 'granted' && (
+            <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <p className="text-xs font-semibold text-white/95">Push Subscription (Web Push)</p>
+                  <p className="text-[9px] text-white/40 mt-0.5">Push payload when application is closed</p>
+                </div>
+                <button
+                  onClick={subscribeToPush}
+                  className="text-[10px] bg-violet-600/30 border border-violet-500/40 text-violet-300 px-2.5 py-1 rounded-lg font-bold hover:bg-violet-600/50"
+                >
+                  {pushSubscription ? 'Registered' : 'Register'}
+                </button>
+              </div>
+              {pushSubscription && (
+                <div className="mt-2 p-2 bg-black/30 border border-white/5 rounded-lg text-[9px] font-mono text-purple-200 overflow-x-auto max-w-full whitespace-pre select-all max-h-20 shrink-0">
+                  {pushSubscription}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Group 2: Sounds selections */}

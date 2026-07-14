@@ -77,3 +77,38 @@ self.addEventListener('notificationclick', (e) => {
     })
   );
 });
+
+// Background Push Notification Event Handler (Fires when browser/app is closed)
+self.addEventListener('push', (e) => {
+  let data = {};
+  if (e.data) {
+    try {
+      data = e.data.json();
+    } catch (err) {
+      data = { body: e.data.text() };
+    }
+  }
+
+  const title = data.title || 'Lumina Reminder Alert 🔔';
+  const options = {
+    body: data.body || 'You have an active task reminder!',
+    icon: data.icon || '/favicon.svg',
+    badge: data.badge || '/favicon.svg',
+    tag: data.tag || 'lumina-reminder',
+    vibrate: data.vibrate || [200, 100, 200, 100, 400],
+    data: {
+      url: data.url || '/'
+    },
+    actions: [
+      { action: 'open', title: 'Open App' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ],
+    // Force device sound wakeup priority in Android OS
+    renotify: true,
+    requireInteraction: true
+  };
+
+  e.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
