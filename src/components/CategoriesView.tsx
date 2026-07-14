@@ -49,7 +49,7 @@ export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden h-full">
+    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden min-h-0">
       
       <div className="flex-1 flex flex-col overflow-y-auto pr-1">
         
@@ -57,7 +57,7 @@ export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
         <h2 className="text-xl font-bold font-display text-white mb-5 z-20">Categories</h2>
 
         {/* Categories Grid list */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6 shrink-0">
           {categoriesList.map((cat) => {
             const catReminders = getRemindersForCat(cat.name);
             const total = catReminders.length;
@@ -103,7 +103,7 @@ export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
         </div>
 
         {/* Category List Header */}
-        <h4 className="text-xs font-bold text-white/55 tracking-wider uppercase mb-3.5 ml-1">
+        <h4 className="text-xs font-bold text-white/55 tracking-wider uppercase mb-3.5 ml-1 shrink-0">
           {activeCategory} Reminders List
         </h4>
 
@@ -114,7 +114,7 @@ export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="glass-panel border-dashed border-white/10 rounded-2xl py-10 flex flex-col items-center justify-center text-center px-6"
+                className="glass-panel border-dashed border-white/10 rounded-2xl py-10 flex flex-col items-center justify-center text-center px-6 shrink-0"
               >
                 <p className="text-[11px] font-semibold text-white/60">No reminders in {activeCategory} category</p>
               </motion.div>
@@ -126,7 +126,7 @@ export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className={`glass-panel rounded-xl p-3.5 transition-all duration-300 relative overflow-hidden ${
+                  className={`glass-panel rounded-xl p-3.5 transition-all duration-300 relative overflow-hidden shrink-0 ${
                     reminder.completed ? 'opacity-55' : ''
                   }`}
                 >

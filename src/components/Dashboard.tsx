@@ -93,7 +93,7 @@ export function Dashboard({ onAddClick }: DashboardProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden h-full">
+    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden min-h-0">
       
       {/* Scrollable Container */}
       <div className="flex-1 flex flex-col overflow-y-auto pr-1">
@@ -136,7 +136,7 @@ export function Dashboard({ onAddClick }: DashboardProps) {
         </div>
 
         {/* Dashboard Overview Widget Panel */}
-        <div className="glass-panel rounded-2xl p-5 mb-6 relative overflow-hidden">
+        <div className="glass-panel rounded-2xl p-5 mb-6 relative overflow-hidden shrink-0">
           {/* Subtle decoration glow */}
           <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl"></div>
 
@@ -201,7 +201,7 @@ export function Dashboard({ onAddClick }: DashboardProps) {
         </div>
 
         {/* Today's Reminders Header */}
-        <div className="flex items-center justify-between mb-3.5">
+        <div className="flex items-center justify-between mb-3.5 shrink-0">
           <h3 className="text-sm font-bold font-display text-white/90 tracking-wide">
             Today's Reminders
           </h3>
@@ -221,7 +221,7 @@ export function Dashboard({ onAddClick }: DashboardProps) {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="glass-panel border-dashed border-white/10 rounded-2xl py-12 flex flex-col items-center justify-center text-center px-6"
+                className="glass-panel border-dashed border-white/10 rounded-2xl py-12 flex flex-col items-center justify-center text-center px-6 shrink-0"
               >
                 <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/40 mb-3">
                   <Clock size={20} />
@@ -241,7 +241,7 @@ export function Dashboard({ onAddClick }: DashboardProps) {
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className={`glass-panel rounded-2xl p-4 transition-all duration-300 relative overflow-hidden ${
+                    className={`glass-panel rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shrink-0 ${
                       reminder.completed ? 'opacity-55' : ''
                     } ${isOver ? 'border-red-500/20' : ''}`}
                   >

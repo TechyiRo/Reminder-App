@@ -77,7 +77,7 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden h-full">
+    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden min-h-0">
       
       <div className="flex-1 flex flex-col overflow-y-auto pr-1">
         
@@ -85,7 +85,7 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
         <h2 className="text-xl font-bold font-display text-white mb-5 z-20">Settings</h2>
 
         {/* Profile Card Header */}
-        <div className="glass-panel rounded-2xl p-5 mb-5 text-center relative overflow-hidden">
+        <div className="glass-panel rounded-2xl p-5 mb-5 text-center relative overflow-hidden shrink-0">
           <div className="w-16 h-16 rounded-full border-2 border-violet-500/50 overflow-hidden mx-auto mb-3 shadow-[0_0_15px_rgba(139,92,246,0.3)] bg-[#0d0c1e] flex items-center justify-center font-display font-bold text-white text-lg">
             {user.avatarUrl ? (
               <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
@@ -114,9 +114,9 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
         </div>
 
         {/* Group 1: Notifications settings */}
-        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1">Notifications</h4>
+        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">Notifications</h4>
         
-        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-4 mb-5">
+        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-4 mb-5 shrink-0">
           {/* Ringtone vs Silent */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -182,9 +182,9 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
         </div>
 
         {/* Group 2: Sounds selections */}
-        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1">Sound Tones</h4>
+        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">Sound Tones</h4>
 
-        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-3.5 mb-5">
+        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-3.5 mb-5 shrink-0">
           {(['Default Tone', 'Zen Tone', 'Cosmic Alarm'] as const).map((tone) => {
             const isSelected = settings.toneType === tone;
             const isPreviewing = soundPreviewing === tone;
@@ -220,9 +220,9 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
         </div>
 
         {/* Group 3: Simulation & Troubleshooting */}
-        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1">Simulators & Tests</h4>
+        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">Simulators & Tests</h4>
 
-        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-3 mb-6">
+        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-3 mb-6 shrink-0">
           <p className="text-[10px] text-white/50 leading-relaxed mb-1">
             Test the active alarm modal instantly. Tap below, and an alert will trigger after 5 seconds.
           </p>
@@ -250,7 +250,7 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
         {/* Logout button */}
         <button
           onClick={logout}
-          className="w-full h-12 rounded-2xl border border-red-500/20 bg-red-950/15 hover:bg-red-900/20 text-red-400 font-bold text-sm flex items-center justify-center gap-2 shadow-[inset_0_1px_1px_rgba(239,68,68,0.1)] active:scale-95 transition"
+          className="w-full h-12 rounded-2xl border border-red-500/20 bg-red-950/15 hover:bg-red-900/20 text-red-400 font-bold text-sm flex items-center justify-center gap-2 shadow-[inset_0_1px_1px_rgba(239,68,68,0.1)] active:scale-95 transition shrink-0"
         >
           <LogOut size={16} />
           <span>Sign Out / Lock App</span>

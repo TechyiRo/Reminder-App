@@ -50,7 +50,7 @@ export function MobileFrame({ children }: MobileFrameProps) {
         </div>
 
         {/* Scrollable Frame App Content */}
-        <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+        <div className="flex-1 flex flex-col overflow-hidden relative z-10 h-0 min-h-0">
           {children}
         </div>
 

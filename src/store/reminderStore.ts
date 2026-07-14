@@ -63,6 +63,45 @@ function updateState(updates: Partial<AppState> | ((prev: AppState) => Partial<A
   listeners.forEach(listener => listener());
 }
 
+function scheduleBackgroundNotification(reminder: Reminder) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window) {
+    if (Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(registration => {
+        const triggerTime = new Date(`${reminder.date}T${reminder.time}`).getTime();
+        
+        // Skip if trigger time is in the past
+        if (triggerTime <= Date.now()) return;
+
+        const title = `Reminder: ${reminder.title}`;
+        const options: any = {
+          body: reminder.description || 'Task due now!',
+          icon: '/favicon.svg',
+          tag: reminder.id,
+          requireInteraction: true
+        };
+
+        // Schedule background notification natively via TimestampTrigger if supported by browser
+        if ('TimestampTrigger' in window) {
+          options.showTrigger = new (window as any).TimestampTrigger(triggerTime);
+          registration.showNotification(title, options).catch(err => {
+            console.warn('Failed to schedule TimestampTrigger notification:', err);
+          });
+        }
+      });
+    }
+  }
+}
+
+function cancelBackgroundNotification(id: string) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.getNotifications({ tag: id }).then(notifications => {
+        notifications.forEach(notification => notification.close());
+      });
+    });
+  }
+}
+
 export const reminderStore = {
   getState: () => state,
   subscribe: (listener: () => void) => {
@@ -97,6 +136,7 @@ export const reminderStore = {
     updateState(prev => ({
       reminders: [...prev.reminders, newReminder]
     }));
+    scheduleBackgroundNotification(newReminder);
   },
 
   updateReminder: (id: string, updates: Partial<Reminder>) => {
@@ -106,6 +146,7 @@ export const reminderStore = {
   },
 
   deleteReminder: (id: string) => {
+    cancelBackgroundNotification(id);
     updateState(prev => ({
       reminders: prev.reminders.filter(r => r.id !== id),
       activeRingingReminder: prev.activeRingingReminder?.id === id ? null : prev.activeRingingReminder
@@ -113,19 +154,36 @@ export const reminderStore = {
   },
 
   toggleCompleteReminder: (id: string) => {
+    let targetReminder: Reminder | undefined;
+
     updateState(prev => {
-      const updatedReminders = prev.reminders.map(r => 
-        r.id === id ? { ...r, completed: !r.completed, triggered: r.completed ? false : r.triggered } : r
-      );
+      const updatedReminders = prev.reminders.map(r => {
+        if (r.id === id) {
+          targetReminder = { ...r, completed: !r.completed, triggered: r.completed ? false : r.triggered };
+          return targetReminder;
+        }
+        return r;
+      });
       const isRinging = prev.activeRingingReminder?.id === id;
       return {
         reminders: updatedReminders,
         activeRingingReminder: isRinging ? null : prev.activeRingingReminder
       };
     });
+
+    if (targetReminder) {
+      if (targetReminder.completed) {
+        cancelBackgroundNotification(id);
+      } else {
+        scheduleBackgroundNotification(targetReminder);
+      }
+    }
   },
 
   snoozeReminder: (id: string) => {
+    cancelBackgroundNotification(id);
+    let updatedReminder: Reminder | undefined;
+
     updateState(prev => {
       const timeNow = new Date();
       // Add 5 minutes to local time
@@ -136,19 +194,32 @@ export const reminderStore = {
       const hours = String(timeNow.getHours()).padStart(2, '0');
       const minutes = String(timeNow.getMinutes()).padStart(2, '0');
 
-      return {
-        reminders: prev.reminders.map(r => 
-          r.id === id ? { 
+      const nextDate = `${year}-${month}-${dateStr}`;
+      const nextTime = `${hours}:${minutes}`;
+
+      const updated = prev.reminders.map(r => {
+        if (r.id === id) {
+          updatedReminder = { 
             ...r, 
-            date: `${year}-${month}-${dateStr}`, 
-            time: `${hours}:${minutes}`, 
+            date: nextDate, 
+            time: nextTime, 
             triggered: false, 
             snoozedCount: r.snoozedCount + 1 
-          } : r
-        ),
+          };
+          return updatedReminder;
+        }
+        return r;
+      });
+
+      return {
+        reminders: updated,
         activeRingingReminder: null
       };
     });
+
+    if (updatedReminder) {
+      scheduleBackgroundNotification(updatedReminder);
+    }
   },
 
   dismissRingingReminder: () => {
