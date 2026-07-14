@@ -24,19 +24,19 @@ export function MobileFrame({ children }: MobileFrameProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#06050b] flex items-center justify-center p-0 md:p-6 overflow-hidden select-none">
+    <div className="min-h-[100dvh] bg-[#06050b] flex items-center justify-center p-0 md:p-6 overflow-hidden select-none">
       {/* Background glowing decorations for desktop */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none hidden md:block"></div>
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-pink-600/10 rounded-full blur-[120px] pointer-events-none hidden md:block"></div>
 
       {/* Main Container / Phone Mockup Frame */}
-      <div className="w-full h-screen md:h-[880px] md:w-[412px] md:rounded-[48px] relative md:border-[10px] md:border-[#1a1829] bg-[#0c0a1b] shadow-2xl flex flex-col overflow-hidden animated-mesh-bg animate-mesh-shift">
+      <div className="w-full h-[100dvh] md:h-[880px] md:w-[412px] md:rounded-[48px] relative md:border-[10px] md:border-[#1a1829] bg-[#0c0a1b] shadow-2xl flex flex-col overflow-hidden animated-mesh-bg animate-mesh-shift">
         
         {/* Specular Highlight Outer Rim */}
         <div className="absolute inset-0 rounded-[38px] border border-white/5 pointer-events-none hidden md:block"></div>
 
-        {/* Android Status Bar */}
-        <div className="h-10 px-6 pt-2 flex items-center justify-between text-[11.5px] font-medium text-white/80 z-40 select-none bg-black/10 backdrop-blur-sm">
+        {/* Android Status Bar - Hidden on mobile viewports */}
+        <div className="h-10 px-6 pt-2 hidden md:flex items-center justify-between text-[11.5px] font-medium text-white/80 z-40 select-none bg-black/10 backdrop-blur-sm">
           <span>{time || '10:00 AM'}</span>
           
           {/* Punch hole camera for Android style */}
@@ -54,8 +54,8 @@ export function MobileFrame({ children }: MobileFrameProps) {
           {children}
         </div>
 
-        {/* Android Navigation Gesture Indicator Bar (Bottom) */}
-        <div className="h-6 w-full flex items-center justify-center bg-black/10 z-40 select-none pb-1.5">
+        {/* Android Navigation Gesture Indicator Bar (Bottom) - Hidden on mobile viewports */}
+        <div className="h-6 w-full hidden md:flex items-center justify-center bg-black/10 z-40 select-none pb-1.5">
           <div className="w-[120px] h-[4px] bg-white/30 rounded-full"></div>
         </div>
       </div>
