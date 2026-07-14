@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useReminderStore, reminderStore } from './store/reminderStore';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import MobileFrame from './components/MobileFrame';
 import AuthScreen from './components/AuthScreen';
 import Dashboard from './components/Dashboard';
@@ -60,8 +61,13 @@ export function App() {
 
     setupServiceWorker();
 
-    // ─── Capacitor Native Notifications Click Actions Listener ───────────────────
+    // ─── Capacitor Native Notifications Click Actions Listener & StatusBar Setup ───
     if (Capacitor.isNativePlatform()) {
+      // Configure native status bar to prevent overlap with web layout
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#0b0a19' }).catch(() => {});
+      StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+
       LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
         const reminderId = action.notification.extra?.reminderId;
         if (reminderId) {
