@@ -24,13 +24,13 @@ export function MobileFrame({ children }: MobileFrameProps) {
   }, []);
 
   return (
-    <div className="min-h-[100dvh] bg-[#06050b] flex items-center justify-center p-0 md:p-6 overflow-hidden select-none">
+    <div className="h-full w-full bg-[#06050b] flex items-center justify-center p-0 md:p-6 overflow-hidden select-none">
       {/* Background glowing decorations for desktop */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none hidden md:block"></div>
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-pink-600/10 rounded-full blur-[120px] pointer-events-none hidden md:block"></div>
 
       {/* Main Container / Phone Mockup Frame */}
-      <div className="w-full h-[100dvh] md:h-[880px] md:w-[412px] md:rounded-[48px] relative md:border-[10px] md:border-[#1a1829] bg-[#0c0a1b] shadow-2xl flex flex-col overflow-hidden animated-mesh-bg animate-mesh-shift">
+      <div className="w-full h-full md:h-[880px] md:w-[412px] md:rounded-[48px] relative md:border-[10px] md:border-[#1a1829] bg-[#0c0a1b] shadow-2xl flex flex-col overflow-hidden animated-mesh-bg animate-mesh-shift">
         
         {/* Specular Highlight Outer Rim */}
         <div className="absolute inset-0 rounded-[38px] border border-white/5 pointer-events-none hidden md:block"></div>

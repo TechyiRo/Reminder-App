@@ -86,13 +86,15 @@
 }
 
 @layer base {
-  body {
+  html, body, #root {
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
     background-color: #0b0a19;
     color: #ffffff;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
     user-select: none;
     margin: 0;
     padding: 0;

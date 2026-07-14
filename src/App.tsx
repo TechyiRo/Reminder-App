@@ -44,7 +44,7 @@ export function App() {
   };
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative w-full h-full overflow-hidden">
       {/* Active ringing alarm overlay (displays in-app when a reminder triggers) */}
       {activeRingingReminder && <ActiveReminderOverlay />}
 
