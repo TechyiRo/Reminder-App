@@ -77,7 +77,7 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-4 pb-20 justify-between select-none relative overflow-hidden h-full">
+    <div className="flex-1 flex flex-col px-4 pt-4 justify-between select-none relative overflow-hidden h-full">
       
       <div className="flex-1 flex flex-col overflow-y-auto pr-1">
         
@@ -259,7 +259,7 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
       </div>
 
       {/* Navigation bar replicated */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+      <div className="w-full pb-4">
         <div className="glass-panel-dark rounded-2xl h-14 px-4 flex items-center justify-between z-40 relative">
           <button 
             onClick={() => setScreen('dashboard')}
