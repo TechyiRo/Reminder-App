@@ -20,30 +20,52 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
   const [pushSubscription, setPushSubscription] = useState<string | null>(null);
 
   const subscribeToPush = async () => {
-    if ('serviceWorker' in navigator) {
+    const getMockSubscription = () => ({
+      endpoint: 'https://fcm.googleapis.com/fcm/send/d5L-eJ2n-8b9a2c3d4e5f6g7h8i9j-demo-mobile',
+      keys: {
+        p256dh: 'BEl62iC7KhqEdnACuiDYwsmdEnZ0wzZ12J88461J24D-m-2495G1012C12D29-5H1244-mock',
+        auth: 'auth-key-mock-pwa-glassmorphism-9988-device'
+      }
+    });
+
+    const urlBase64ToUint8Array = (base64String: string) => {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    };
+
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
       try {
         const registration = await navigator.serviceWorker.ready;
         let sub = await registration.pushManager.getSubscription();
         if (!sub) {
           try {
+            const convertedKey = urlBase64ToUint8Array('BEl62iC7KhqEdnACuiDYwsmdEnZ0wzZ12J88461J24D-m-2495G1012C12D29-5H1244');
             sub = await registration.pushManager.subscribe({
               userVisibleOnly: true,
-              applicationServerKey: 'BEl62iC7KhqEdnACuiDYwsmdEnZ0wzZ12J88461J24D-m-2495G1012C12D29-5H1244'
+              applicationServerKey: convertedKey
             });
           } catch (e) {
-            sub = {
-              endpoint: 'https://fcm.googleapis.com/fcm/send/d5L-eJ2n-8b9a2c3d4e5f6g7h8i9j',
-              keys: {
-                p256dh: 'BEl62iC7KhqEdnACuiDYwsmdEnZ0wzZ12J88461J24D-m-2495G1012C12D29-5H1244',
-                auth: 'auth-key-mock-pwa-glassmorphism-9988'
-              }
-            } as any;
+            sub = getMockSubscription() as any;
           }
         }
         setPushSubscription(JSON.stringify(sub, null, 2));
       } catch (err) {
         console.error('Failed to get push subscription:', err);
+        setPushSubscription(JSON.stringify(getMockSubscription(), null, 2));
       }
+    } else {
+      // Fallback mock if serviceWorker or PushManager is unsupported on mobile HTTP previews
+      setPushSubscription(JSON.stringify(getMockSubscription(), null, 2));
     }
   };
 
