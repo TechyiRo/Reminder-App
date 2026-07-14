@@ -124,13 +124,19 @@ export const reminderStore = {
   // Actions
   login: (email: string, name: string) => {
     updateState({
-      user: { email, name, avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256' },
+      user: { email, name, avatarUrl: undefined },
       currentScreen: 'dashboard'
     });
   },
 
   logout: () => {
     updateState({ user: null, activeRingingReminder: null });
+  },
+
+  updateUser: (updates: Partial<User>) => {
+    updateState(prev => ({
+      user: prev.user ? { ...prev.user, ...updates } : prev.user
+    }));
   },
 
   setScreen: (screen: AppState['currentScreen']) => {
@@ -298,6 +304,7 @@ export function useReminderStore() {
     setActiveRingingReminder: reminderStore.setActiveRingingReminder,
     updateSettings: reminderStore.updateSettings,
     triggerReminderImmediately: reminderStore.triggerReminderImmediately,
+    updateUser: reminderStore.updateUser,
   };
 }
 

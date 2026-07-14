@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, Smartphone, Grid, Calendar, Settings as SettingsIcon,
-  ChevronRight, LogOut, ShieldAlert, Sparkles, Music, Database, Download
+  ChevronRight, LogOut, ShieldAlert, Sparkles, Music, Database, Download,
+  Camera, Pencil, X, Check, User as UserIcon, Trash2
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import { playAmbientAlert, stopAmbientAlert } from '../utils/audio';
@@ -9,8 +11,15 @@ import { playAmbientAlert, stopAmbientAlert } from '../utils/audio';
 export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
   const { 
     user, currentScreen, setScreen, settings, updateSettings, logout, 
-    reminders, setActiveRingingReminder 
+    reminders, setActiveRingingReminder, updateUser
   } = useReminderStore();
+
+  // ─── Profile edit state ────────────────────────────────────────────────────
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [showNameEdit, setShowNameEdit] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   const [simulatedTime, setSimulatedTime] = useState<number | null>(null);
   const [soundPreviewing, setSoundPreviewing] = useState<string | null>(null);
@@ -135,26 +144,106 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
         {/* Title */}
         <h2 className="text-xl font-bold font-display text-white mb-5 z-20">Settings</h2>
 
-        {/* Profile Card Header */}
+        {/* Profile Card Header — with avatar picker + name editor */}
         <div className="glass-panel rounded-2xl p-5 mb-5 text-center relative overflow-hidden shrink-0">
-          <div className="w-16 h-16 rounded-full border-2 border-violet-500/50 overflow-hidden mx-auto mb-3 shadow-[0_0_15px_rgba(139,92,246,0.3)] bg-[#0d0c1e] flex items-center justify-center font-display font-bold text-white text-lg">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              user.name.substring(0, 2).toUpperCase()
-            )}
-          </div>
-          <h3 className="font-bold text-base text-white font-display">{user.name}</h3>
-          <p className="text-[10px] text-white/40 mt-0.5">{user.email}</p>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/8 rounded-full blur-3xl" />
 
-          {/* Small count stats splits */}
+          {/* Tappable Avatar with camera overlay */}
+          <div className="relative w-20 h-20 mx-auto mb-3">
+            <div className="w-20 h-20 rounded-full border-2 border-violet-500/50 overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.35)] bg-[#0d0c1e] flex items-center justify-center font-display font-bold text-white text-xl">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center text-white text-xl font-bold font-display">
+                  {user.name.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            {/* Camera tap button */}
+            <button
+              onClick={() => { setAvatarError(null); avatarInputRef.current?.click(); }}
+              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-violet-600 border-2 border-[#0b0a19] flex items-center justify-center shadow-md active:scale-95 transition-transform"
+            >
+              <Camera size={13} className="text-white" />
+            </button>
+          </div>
+
+          {/* Hidden file input */}
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+
+              // 5 MB guard
+              if (file.size > 5 * 1024 * 1024) {
+                setAvatarError('Image is too large. Please choose a file under 5 MB.');
+                return;
+              }
+
+              setAvatarUploading(true);
+              setAvatarError(null);
+              try {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  const dataUrl = ev.target?.result as string;
+                  updateUser({ avatarUrl: dataUrl });
+                  setAvatarUploading(false);
+                };
+                reader.onerror = () => {
+                  setAvatarError('Failed to read image. Please try again.');
+                  setAvatarUploading(false);
+                };
+                reader.readAsDataURL(file);
+              } catch {
+                setAvatarError('Something went wrong. Please try again.');
+                setAvatarUploading(false);
+              }
+            }}
+          />
+
+          {avatarUploading && (
+            <p className="text-[9px] text-violet-400 mb-1 animate-pulse">Saving photo…</p>
+          )}
+          {avatarError && (
+            <p className="text-[9px] text-red-400 mb-1">{avatarError}</p>
+          )}
+
+          {/* Name row with edit button */}
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <h3 className="font-bold text-base text-white font-display">{user.name}</h3>
+            <button
+              onClick={() => { setEditName(user.name); setShowNameEdit(true); }}
+              className="w-6 h-6 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center text-white/40 hover:text-violet-400 transition-colors"
+            >
+              <Pencil size={11} />
+            </button>
+          </div>
+          <p className="text-[10px] text-white/40">{user.email}</p>
+
+          {/* Remove avatar button */}
+          {user.avatarUrl && (
+            <button
+              onClick={() => updateUser({ avatarUrl: undefined })}
+              className="mt-3 text-[9px] text-red-400/60 hover:text-red-400 flex items-center gap-1 mx-auto transition-colors"
+            >
+              <Trash2 size={9} /> Remove photo
+            </button>
+          )}
+
+          {/* Count stats */}
           <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5">
             <div className="flex flex-col items-center">
               <span className="text-[10px] text-white/40 font-semibold uppercase">Total</span>
               <span className="text-sm font-bold text-white/80 mt-0.5">{totalReminders}</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[10px] text-emerald-400 font-semibold uppercase">Completed</span>
+              <span className="text-[10px] text-emerald-400 font-semibold uppercase">Done</span>
               <span className="text-sm font-bold text-emerald-400 mt-0.5">{completedCount}</span>
             </div>
             <div className="flex flex-col items-center">
@@ -163,6 +252,72 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
             </div>
           </div>
         </div>
+
+        {/* Name Edit Modal */}
+        <AnimatePresence>
+          {showNameEdit && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-end justify-center"
+              onClick={(e) => { if (e.target === e.currentTarget) setShowNameEdit(false); }}
+            >
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+              <motion.div
+                initial={{ y: 80, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 80, opacity: 0 }}
+                transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+                className="relative w-full max-w-sm glass-panel-dark rounded-t-3xl p-6 pb-10 border-t border-white/10 shadow-2xl"
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <UserIcon size={15} className="text-violet-400" />
+                    <p className="text-sm font-bold text-white">Edit Display Name</p>
+                  </div>
+                  <button
+                    onClick={() => setShowNameEdit(false)}
+                    className="w-7 h-7 rounded-full bg-white/8 border border-white/10 flex items-center justify-center text-white/50"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                <input
+                  autoFocus
+                  type="text"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  maxLength={40}
+                  placeholder="Enter your name…"
+                  className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none focus:border-violet-500/60 focus:bg-violet-600/8 transition-all mb-4"
+                />
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowNameEdit(false)}
+                    className="flex-1 h-11 rounded-xl bg-white/5 border border-white/10 text-white/60 font-semibold text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const trimmed = editName.trim();
+                      if (trimmed.length >= 1) {
+                        updateUser({ name: trimmed });
+                        setShowNameEdit(false);
+                      }
+                    }}
+                    className="flex-1 h-11 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30"
+                  >
+                    <Check size={15} /> Save
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Backup & Restore Card */}
         <button
