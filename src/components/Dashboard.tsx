@@ -93,7 +93,7 @@ export function Dashboard({ onAddClick }: DashboardProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-4 pt-4 pb-20 justify-between select-none">
+    <div className="flex-1 flex flex-col px-4 pt-4 pb-20 justify-between select-none relative overflow-hidden h-full">
       
       {/* Scrollable Container */}
       <div className="flex-1 flex flex-col overflow-y-auto pr-1">
