@@ -13,18 +13,22 @@ export function App() {
   const { user, currentScreen, activeRingingReminder } = useReminderStore();
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  // Register PWA Service Worker for offline operations
+  // Register PWA Service Worker and prompt for notification permissions immediately
   useEffect(() => {
-    if ('serviceWorker' in navigator && import.meta.env.PROD) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(
-          (registration) => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          },
-          (err) => {
-            console.log('ServiceWorker registration failed: ', err);
-          }
-        );
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(
+        (registration) => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        },
+        (err) => {
+          console.log('ServiceWorker registration failed: ', err);
+        }
+      );
+    }
+
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        console.log('Notification permission status:', permission);
       });
     }
   }, []);

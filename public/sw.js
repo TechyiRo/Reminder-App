@@ -7,7 +7,8 @@ const ASSETS = [
   '/src/App.tsx',
   '/src/index.css',
   '/src/store/reminderStore.ts',
-  '/src/utils/audio.ts'
+  '/src/utils/audio.ts',
+  '/alarm.wav'
 ];
 
 // Install Event
@@ -96,6 +97,7 @@ self.addEventListener('push', (e) => {
     badge: data.badge || '/favicon.svg',
     tag: data.tag || 'lumina-reminder',
     vibrate: data.vibrate || [200, 100, 200, 100, 400],
+    sound: '/alarm.wav',
     data: {
       url: data.url || '/'
     },

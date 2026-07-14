@@ -77,7 +77,9 @@ function scheduleBackgroundNotification(reminder: Reminder) {
           body: reminder.description || 'Task due now!',
           icon: '/favicon.svg',
           tag: reminder.id,
-          requireInteraction: true
+          requireInteraction: true,
+          vibrate: [200, 100, 200, 100, 400],
+          sound: '/alarm.wav'
         };
 
         // Schedule background notification natively via TimestampTrigger if supported by browser
