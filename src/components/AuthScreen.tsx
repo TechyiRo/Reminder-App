@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, KeyRound, BellRing, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 
 export function AuthScreen() {
@@ -98,9 +98,8 @@ export function AuthScreen() {
 
         {/* Branding Title */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-gradient-to-tr from-violet-600 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30 mb-3 border border-white/20 relative">
-            <BellRing className="text-white animate-pulse-slow" size={26} />
-            <Sparkles className="absolute -top-1 -right-1 text-yellow-300 animate-bounce" size={16} />
+          <div className="w-16 h-16 mb-3 relative flex items-center justify-center">
+            <img src="/logo.png" alt="Lumina Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_10px_rgba(139,92,246,0.3)]" />
           </div>
           <h1 className="text-2xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-white via-white/90 to-purple-200">
             Welcome Back 👋

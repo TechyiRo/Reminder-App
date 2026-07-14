@@ -116,23 +116,30 @@ export function Dashboard({ onAddClick }: DashboardProps) {
             </div>
           </div>
 
-          {/* Alert Ringtone Control Selector */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleSound}
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all duration-300 ${
-              settings.soundOption === 'Ringtone + Notification'
-                ? 'bg-violet-600/20 border-violet-500/40 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.3)]'
-                : 'bg-white/5 border-white/10 text-white/50'
-            }`}
-            title="Global Alarm Sound Mode Toggle"
-          >
-            {settings.soundOption === 'Ringtone + Notification' ? (
-              <Bell size={16} className="animate-pulse" />
-            ) : (
-              <BellOff size={16} />
-            )}
-          </motion.button>
+          <div className="flex items-center gap-2">
+            {/* Small Logo Badge in Header */}
+            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-1">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+
+            {/* Alert Ringtone Control Selector */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleSound}
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-300 ${
+                settings.soundOption === 'Ringtone + Notification'
+                  ? 'bg-violet-600/20 border-violet-500/40 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.3)]'
+                  : 'bg-white/5 border-white/10 text-white/50'
+              }`}
+              title="Global Alarm Sound Mode Toggle"
+            >
+              {settings.soundOption === 'Ringtone + Notification' ? (
+                <Bell size={14} className="animate-pulse" />
+              ) : (
+                <BellOff size={14} />
+              )}
+            </motion.button>
+          </div>
         </div>
 
         {/* Dashboard Overview Widget Panel */}

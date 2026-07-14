@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { dbSaveReminder, dbDeleteReminder, dbGetAllReminders, dbSaveUser, dbGetUser, dbSaveSettings, dbGetSettings } from './db';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export interface Reminder {
   id: string;
@@ -82,33 +84,80 @@ function registerBackgroundSync() {
   }
 }
 
-function scheduleBackgroundNotification(reminder: Reminder) {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+function getNotificationId(uuid: string): number {
+  let hash = 0;
+  for (let i = 0; i < uuid.length; i++) {
+    hash = (hash << 5) - hash + uuid.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
 
+function scheduleBackgroundNotification(reminder: Reminder) {
   const triggerTime = new Date(`${reminder.date}T${reminder.time}:00`).getTime();
   if (isNaN(triggerTime) || triggerTime <= Date.now()) return;
 
-  // Post directly to active SW — SW handles TimestampTrigger / setTimeout internally
-  navigator.serviceWorker.ready.then(registration => {
-    const sw = registration.active;
-    if (sw) {
-      sw.postMessage({ type: 'SCHEDULE_REMINDER', reminder });
-    }
-    // Also trigger a one-shot Background Sync to persist scheduling
-    if ('sync' in registration) {
-      (registration as any).sync.register('sync-reminders').catch(() => {});
-    }
-  }).catch(() => {});
+  if (Capacitor.isNativePlatform()) {
+    // Native local notification via Capacitor
+    LocalNotifications.requestPermissions().then(permission => {
+      if (permission.display === 'granted') {
+        LocalNotifications.schedule({
+          notifications: [
+            {
+              title: `🔔 ${reminder.title}`,
+              body: reminder.description && reminder.description.trim() 
+                ? reminder.description 
+                : 'Task due now!',
+              id: getNotificationId(reminder.id),
+              schedule: { at: new Date(triggerTime) },
+              sound: 'alarm.wav',
+              extra: { reminderId: reminder.id },
+              smallIcon: 'res://ic_stat_notification',
+              iconColor: '#8b5cf6'
+            }
+          ]
+        }).then(() => {
+          console.log(`[Capacitor] Scheduled notification: ${reminder.title} at ${reminder.date} ${reminder.time}`);
+        }).catch(err => {
+          console.error('[Capacitor] Failed to schedule notification:', err);
+        });
+      }
+    });
+  } else {
+    // PWA Service Worker Fallback
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(registration => {
+      const sw = registration.active;
+      if (sw) {
+        sw.postMessage({ type: 'SCHEDULE_REMINDER', reminder });
+      }
+      if ('sync' in registration) {
+        (registration as any).sync.register('sync-reminders').catch(() => {});
+      }
+    }).catch(() => {});
+  }
 }
 
-
 function cancelBackgroundNotification(id: string) {
-  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(registration => {
-      registration.getNotifications({ tag: id }).then(notifications => {
-        notifications.forEach(notification => notification.close());
-      });
+  if (Capacitor.isNativePlatform()) {
+    LocalNotifications.cancel({
+      notifications: [{ id: getNotificationId(id) }]
+    }).then(() => {
+      console.log(`[Capacitor] Cancelled notification: ${id}`);
+    }).catch(err => {
+      console.error('[Capacitor] Failed to cancel notification:', err);
     });
+  } else {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.getNotifications({ tag: `lumina-${id}` }).then(notifications => {
+          notifications.forEach(notification => notification.close());
+        });
+        registration.getNotifications({ tag: id }).then(notifications => {
+          notifications.forEach(notification => notification.close());
+        });
+      }).catch(() => {});
+    }
   }
 }
 
@@ -360,7 +409,19 @@ if (typeof window !== 'undefined') {
   // Load from IndexedDB (Dexie) on startup – hydrate all state
   Promise.all([dbGetAllReminders(), dbGetUser(), dbGetSettings()]).then(([dbReminders, dbUser, dbSettings]) => {
     const updates: Partial<typeof state> = {};
-    if (dbReminders && dbReminders.length > 0) updates.reminders = dbReminders;
+    if (dbReminders && dbReminders.length > 0) {
+      updates.reminders = dbReminders;
+      // Reschedule all upcoming reminders to ensure native Android/PWA alarms are active
+      const now = Date.now();
+      dbReminders.forEach(reminder => {
+        if (!reminder.completed && !reminder.triggered) {
+          const triggerTime = new Date(`${reminder.date}T${reminder.time}:00`).getTime();
+          if (!isNaN(triggerTime) && triggerTime > now) {
+            scheduleBackgroundNotification(reminder);
+          }
+        }
+      });
+    }
     if (dbUser) updates.user = dbUser;
     if (dbSettings) updates.settings = dbSettings;
     if (Object.keys(updates).length > 0) updateState(updates);

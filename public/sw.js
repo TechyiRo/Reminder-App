@@ -11,7 +11,8 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.svg',
+  '/favicon.png',
+  '/logo.png',
   '/icons.svg',
   '/alarm.wav'
 ];
@@ -158,8 +159,8 @@ async function fireNotification(reminder) {
     body: reminder.description && reminder.description.trim()
       ? reminder.description
       : `Reminder scheduled for ${reminder.time}`,
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
+    icon: '/favicon.png',
+    badge: '/favicon.png',
     tag: `lumina-${reminder.id}`,
     data: { reminderId: reminder.id, url: '/' },
     actions: [
@@ -187,8 +188,8 @@ async function scheduleNativeNotification(reminder, triggerTime) {
     body: reminder.description && reminder.description.trim()
       ? reminder.description
       : `Reminder scheduled for ${reminder.time}`,
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
+    icon: '/favicon.png',
+    badge: '/favicon.png',
     tag: `lumina-${reminder.id}`,
     data: { reminderId: reminder.id, url: '/' },
     actions: [
@@ -273,8 +274,8 @@ self.addEventListener('push', event => {
   const title  = data.title  || '🔔 Lumina Reminder';
   const options = {
     body:               data.body    || 'You have a pending reminder!',
-    icon:               data.icon    || '/favicon.svg',
-    badge:              data.badge   || '/favicon.svg',
+    icon:               data.icon    || '/favicon.png',
+    badge:              data.badge   || '/favicon.png',
     tag:                data.tag     || 'lumina-push',
     data:               { url: data.url || '/' },
     vibrate:            [300, 100, 300, 100, 600],

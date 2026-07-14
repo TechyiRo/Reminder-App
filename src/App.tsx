@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useReminderStore } from './store/reminderStore';
+import { useReminderStore, reminderStore } from './store/reminderStore';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import MobileFrame from './components/MobileFrame';
 import AuthScreen from './components/AuthScreen';
 import Dashboard from './components/Dashboard';
@@ -57,6 +59,25 @@ export function App() {
     };
 
     setupServiceWorker();
+
+    // ─── Capacitor Native Notifications Click Actions Listener ───────────────────
+    if (Capacitor.isNativePlatform()) {
+      LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        const reminderId = action.notification.extra?.reminderId;
+        if (reminderId) {
+          console.log('[Capacitor] Notification click action received for reminder:', reminderId);
+          const storeState = reminderStore.getState();
+          const target = storeState.reminders.find(r => r.id === reminderId);
+          if (target) {
+            reminderStore.setActiveRingingReminder(target);
+          }
+        }
+      });
+      // Request native local notification permission on startup
+      LocalNotifications.requestPermissions().then(permission => {
+        console.log('[Capacitor] Native local notification permission:', permission.display);
+      });
+    }
   }, []);
 
   const renderActiveScreen = () => {
