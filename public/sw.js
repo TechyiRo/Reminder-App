@@ -1,0 +1,79 @@
+// Service Worker for Premium Reminder App (Offline and Background Notification management)
+const CACHE_NAME = 'glass-reminders-v1';
+const ASSETS = [
+  '/',
+  '/index.html',
+  '/src/main.tsx',
+  '/src/App.tsx',
+  '/src/index.css',
+  '/src/store/reminderStore.ts',
+  '/src/utils/audio.ts'
+];
+
+// Install Event
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS).catch(() => {
+        // Safe fallback if some assets fail in dev mode
+      });
+    })
+  );
+  self.skipWaiting();
+});
+
+// Activate Event
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch Event (Offline capability)
+self.addEventListener('fetch', (e) => {
+  // Ignore typescript-only build requests or development hot reloads in cache
+  if (e.request.url.includes('@vite') || e.request.url.includes('node_modules')) {
+    return;
+  }
+  
+  e.respondWith(
+    caches.match(e.request).then((cachedResponse) => {
+      return cachedResponse || fetch(e.request).catch(() => {
+        // Fallback for document navigation
+        if (e.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+      });
+    })
+  );
+});
+
+// Background Notification Click Event Handler
+self.addEventListener('notificationclick', (e) => {
+  const notification = e.notification;
+  notification.close();
+
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing app tab if open
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      // Or open a new client window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+    })
+  );
+});
