@@ -63,6 +63,76 @@ function updateState(updates: Partial<AppState> | ((prev: AppState) => Partial<A
   listeners.forEach(listener => listener());
 }
 
+const DB_NAME = 'LuminaRemindersDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'reminders';
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      reject('IndexedDB is not supported');
+      return;
+    }
+    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function saveReminderToDB(reminder: Reminder): Promise<void> {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(reminder);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  });
+}
+
+function deleteReminderFromDB(id: string): Promise<void> {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  });
+}
+
+function getAllRemindersFromDB(): Promise<Reminder[]> {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  });
+}
+
+function registerBackgroundSync() {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      if ('sync' in registration) {
+        (registration as any).sync.register('sync-reminders').catch((err: any) => {
+          console.warn('Background sync registration failed:', err);
+        });
+      }
+    });
+  }
+}
+
 function scheduleBackgroundNotification(reminder: Reminder) {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window) {
     if (Notification.permission === 'granted') {
@@ -108,7 +178,9 @@ export const reminderStore = {
   getState: () => state,
   subscribe: (listener: () => void) => {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => {
+      listeners.delete(listener);
+    };
   },
 
   // Actions
@@ -138,13 +210,29 @@ export const reminderStore = {
     updateState(prev => ({
       reminders: [...prev.reminders, newReminder]
     }));
+    saveReminderToDB(newReminder).then(() => {
+      registerBackgroundSync();
+    });
     scheduleBackgroundNotification(newReminder);
   },
 
   updateReminder: (id: string, updates: Partial<Reminder>) => {
-    updateState(prev => ({
-      reminders: prev.reminders.map(r => r.id === id ? { ...r, ...updates } : r)
-    }));
+    let updatedReminder: Reminder | undefined;
+    updateState(prev => {
+      const reminders = prev.reminders.map(r => {
+        if (r.id === id) {
+          updatedReminder = { ...r, ...updates };
+          return updatedReminder;
+        }
+        return r;
+      });
+      return { reminders };
+    });
+    if (updatedReminder) {
+      saveReminderToDB(updatedReminder).then(() => {
+        registerBackgroundSync();
+      });
+    }
   },
 
   deleteReminder: (id: string) => {
@@ -153,6 +241,9 @@ export const reminderStore = {
       reminders: prev.reminders.filter(r => r.id !== id),
       activeRingingReminder: prev.activeRingingReminder?.id === id ? null : prev.activeRingingReminder
     }));
+    deleteReminderFromDB(id).then(() => {
+      registerBackgroundSync();
+    });
   },
 
   toggleCompleteReminder: (id: string) => {
@@ -174,6 +265,9 @@ export const reminderStore = {
     });
 
     if (targetReminder) {
+      saveReminderToDB(targetReminder).then(() => {
+        registerBackgroundSync();
+      });
       if (targetReminder.completed) {
         cancelBackgroundNotification(id);
       } else {
@@ -220,6 +314,9 @@ export const reminderStore = {
     });
 
     if (updatedReminder) {
+      saveReminderToDB(updatedReminder).then(() => {
+        registerBackgroundSync();
+      });
       scheduleBackgroundNotification(updatedReminder);
     }
   },
@@ -324,4 +421,13 @@ if (typeof window !== 'undefined') {
       }
     });
   }, 1000);
+
+  // Load from IndexedDB on startup
+  getAllRemindersFromDB().then(dbReminders => {
+    if (dbReminders && dbReminders.length > 0) {
+      updateState({ reminders: dbReminders });
+    }
+  }).catch(err => {
+    console.warn('Failed to load initial reminders from IndexedDB:', err);
+  });
 }

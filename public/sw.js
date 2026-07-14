@@ -114,3 +114,155 @@ self.addEventListener('push', (e) => {
     self.registration.showNotification(title, options)
   );
 });
+
+// ==========================================
+// IndexedDB Persistence & Background Sync
+// ==========================================
+
+const DB_NAME = 'LuminaRemindersDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'reminders';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function getAllReminders() {
+  return openDB().then((db) => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  });
+}
+
+function saveReminder(reminder) {
+  return openDB().then((db) => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(reminder);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  });
+}
+
+// Listen to Background Sync event (wakes up Service Worker on connectivity or manual sync call)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-reminders') {
+    event.waitUntil(syncRemindersAndSchedule());
+  }
+});
+
+// Periodic background wakeup trigger (optional fallback sync check)
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'sync-reminders') {
+    event.waitUntil(syncRemindersAndSchedule());
+  }
+});
+
+async function syncRemindersAndSchedule() {
+  try {
+    const reminders = await getAllReminders();
+    const now = Date.now();
+    const activeNotifications = await self.registration.getNotifications();
+
+    for (const reminder of reminders) {
+      if (reminder.completed) {
+        const active = activeNotifications.find(n => n.tag === reminder.id);
+        if (active) active.close();
+        continue;
+      }
+
+      const triggerTime = new Date(`${reminder.date}T${reminder.time}`).getTime();
+      
+      if (triggerTime <= now) {
+        // Trigger immediately if overdue and not previously triggered
+        if (!reminder.triggered) {
+          await triggerImmediateNotification(reminder);
+        }
+      } else {
+        // Schedule local alarm natively using TimestampTrigger if supported by browser
+        await scheduleLocalNotification(reminder, triggerTime);
+      }
+    }
+  } catch (err) {
+    console.error('Error in background sync reminders handler:', err);
+  }
+}
+
+async function triggerImmediateNotification(reminder) {
+  const title = `Reminder: ${reminder.title}`;
+  const options = {
+    body: reminder.description || 'Task due now!',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    tag: reminder.id,
+    vibrate: [200, 100, 200, 100, 400],
+    sound: '/alarm.wav',
+    data: {
+      url: '/'
+    },
+    actions: [
+      { action: 'open', title: 'Open App' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ],
+    renotify: true,
+    requireInteraction: true
+  };
+
+  await self.registration.showNotification(title, options);
+  
+  // Persist triggered state to DB
+  reminder.triggered = true;
+  await saveReminder(reminder);
+}
+
+async function scheduleLocalNotification(reminder, triggerTime) {
+  const title = `Reminder: ${reminder.title}`;
+  const options = {
+    body: reminder.description || 'Task due now!',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    tag: reminder.id,
+    vibrate: [200, 100, 200, 100, 400],
+    sound: '/alarm.wav',
+    data: {
+      url: '/'
+    },
+    actions: [
+      { action: 'open', title: 'Open App' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ],
+    renotify: true,
+    requireInteraction: true
+  };
+
+  if ('showTrigger' in Notification.prototype) {
+    // Chromium experimental support
+    options.showTrigger = new TimestampTrigger(triggerTime);
+    await self.registration.showNotification(title, options);
+  } else {
+    // Best-effort background timer fallback
+    const delay = triggerTime - Date.now();
+    if (delay > 0 && delay < 600000) { // 10 minute threshold
+      setTimeout(() => {
+        self.registration.showNotification(title, options);
+      }, delay);
+    }
+  }
+}
