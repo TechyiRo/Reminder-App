@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   Bell, Smartphone, Grid, Calendar, Settings as SettingsIcon,
-  ChevronRight, LogOut, ShieldAlert, Sparkles, Music
+  ChevronRight, LogOut, ShieldAlert, Sparkles, Music, Database, Download
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import { playAmbientAlert, stopAmbientAlert } from '../utils/audio';
@@ -163,6 +163,24 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
             </div>
           </div>
         </div>
+
+        {/* Backup & Restore Card */}
+        <button
+          onClick={() => setScreen('backup')}
+          className="w-full glass-panel rounded-2xl p-4 flex items-center gap-3 mb-5 shrink-0 border border-violet-500/20 bg-violet-600/5 hover:bg-violet-600/10 active:scale-[0.98] transition-all text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600/40 to-pink-600/40 border border-violet-500/30 flex items-center justify-center shrink-0">
+            <Database size={18} className="text-violet-300" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-white/90">Backup & Restore</p>
+            <p className="text-[9px] text-white/40 mt-0.5">Encrypted backup — protect your reminders</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Download size={12} className="text-violet-400" />
+            <ChevronRight size={14} className="text-white/30" />
+          </div>
+        </button>
 
         {/* Group 1: Notifications settings */}
         <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">Notifications</h4>

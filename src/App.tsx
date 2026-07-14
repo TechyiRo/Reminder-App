@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import CalendarView from './components/CalendarView';
 import CategoriesView from './components/CategoriesView';
 import SettingsView from './components/SettingsView';
+import BackupView from './components/BackupView';
 import ActiveReminderOverlay from './components/ActiveReminderOverlay';
 import AddReminderSheet from './components/AddReminderSheet';
 
@@ -41,6 +42,8 @@ export function App() {
         return <CategoriesView onAddClick={() => setIsAddOpen(true)} />;
       case 'settings':
         return <SettingsView onAddClick={() => setIsAddOpen(true)} />;
+      case 'backup':
+        return <BackupView onAddClick={() => setIsAddOpen(true)} />;
       case 'dashboard':
       default:
         return <Dashboard onAddClick={() => setIsAddOpen(true)} />;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { dbSaveReminder, dbDeleteReminder, dbGetAllReminders, dbSaveUser, dbGetUser, dbSaveSettings, dbGetSettings } from './db';
 
 export interface Reminder {
   id: string;
@@ -29,7 +30,7 @@ export interface AppSettings {
 interface AppState {
   reminders: Reminder[];
   activeRingingReminder: Reminder | null;
-  currentScreen: 'dashboard' | 'calendar' | 'categories' | 'settings';
+  currentScreen: 'dashboard' | 'calendar' | 'categories' | 'settings' | 'backup';
   user: User | null;
   settings: AppSettings;
 }
@@ -54,6 +55,9 @@ function saveToStorage() {
   localStorage.setItem('glass_reminders', JSON.stringify(state.reminders));
   localStorage.setItem('glass_user', JSON.stringify(state.user));
   localStorage.setItem('glass_settings', JSON.stringify(state.settings));
+  // Mirror to Dexie IndexedDB
+  if (state.user) dbSaveUser(state.user).catch(() => {});
+  if (state.settings) dbSaveSettings(state.settings).catch(() => {});
 }
 
 function updateState(updates: Partial<AppState> | ((prev: AppState) => Partial<AppState>)) {
@@ -63,63 +67,8 @@ function updateState(updates: Partial<AppState> | ((prev: AppState) => Partial<A
   listeners.forEach(listener => listener());
 }
 
-const DB_NAME = 'LuminaRemindersDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'reminders';
+// ─── All IndexedDB operations are handled by Dexie in src/store/db.ts ─────────
 
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined' || !window.indexedDB) {
-      reject('IndexedDB is not supported');
-      return;
-    }
-    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function saveReminderToDB(reminder: Reminder): Promise<void> {
-  return openDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(reminder);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  });
-}
-
-function deleteReminderFromDB(id: string): Promise<void> {
-  return openDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  });
-}
-
-function getAllRemindersFromDB(): Promise<Reminder[]> {
-  return openDB().then(db => {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  });
-}
 
 function registerBackgroundSync() {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -210,9 +159,7 @@ export const reminderStore = {
     updateState(prev => ({
       reminders: [...prev.reminders, newReminder]
     }));
-    saveReminderToDB(newReminder).then(() => {
-      registerBackgroundSync();
-    });
+    dbSaveReminder(newReminder).then(() => registerBackgroundSync()).catch(() => {});
     scheduleBackgroundNotification(newReminder);
   },
 
@@ -229,9 +176,7 @@ export const reminderStore = {
       return { reminders };
     });
     if (updatedReminder) {
-      saveReminderToDB(updatedReminder).then(() => {
-        registerBackgroundSync();
-      });
+      dbSaveReminder(updatedReminder).then(() => registerBackgroundSync()).catch(() => {});
     }
   },
 
@@ -241,9 +186,7 @@ export const reminderStore = {
       reminders: prev.reminders.filter(r => r.id !== id),
       activeRingingReminder: prev.activeRingingReminder?.id === id ? null : prev.activeRingingReminder
     }));
-    deleteReminderFromDB(id).then(() => {
-      registerBackgroundSync();
-    });
+    dbDeleteReminder(id).then(() => registerBackgroundSync()).catch(() => {});
   },
 
   toggleCompleteReminder: (id: string) => {
@@ -265,9 +208,7 @@ export const reminderStore = {
     });
 
     if (targetReminder) {
-      saveReminderToDB(targetReminder).then(() => {
-        registerBackgroundSync();
-      });
+      dbSaveReminder(targetReminder).then(() => registerBackgroundSync()).catch(() => {});
       if (targetReminder.completed) {
         cancelBackgroundNotification(id);
       } else {
@@ -314,9 +255,7 @@ export const reminderStore = {
     });
 
     if (updatedReminder) {
-      saveReminderToDB(updatedReminder).then(() => {
-        registerBackgroundSync();
-      });
+      dbSaveReminder(updatedReminder).then(() => registerBackgroundSync()).catch(() => {});
       scheduleBackgroundNotification(updatedReminder);
     }
   },
@@ -422,12 +361,14 @@ if (typeof window !== 'undefined') {
     });
   }, 1000);
 
-  // Load from IndexedDB on startup
-  getAllRemindersFromDB().then(dbReminders => {
-    if (dbReminders && dbReminders.length > 0) {
-      updateState({ reminders: dbReminders });
-    }
+  // Load from IndexedDB (Dexie) on startup – hydrate all state
+  Promise.all([dbGetAllReminders(), dbGetUser(), dbGetSettings()]).then(([dbReminders, dbUser, dbSettings]) => {
+    const updates: Partial<typeof state> = {};
+    if (dbReminders && dbReminders.length > 0) updates.reminders = dbReminders;
+    if (dbUser) updates.user = dbUser;
+    if (dbSettings) updates.settings = dbSettings;
+    if (Object.keys(updates).length > 0) updateState(updates);
   }).catch(err => {
-    console.warn('Failed to load initial reminders from IndexedDB:', err);
+    console.warn('Failed to load initial state from IndexedDB:', err);
   });
 }
