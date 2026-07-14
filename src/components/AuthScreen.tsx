@@ -80,7 +80,7 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-center px-6 py-10 relative overflow-hidden">
+    <div className="flex-1 flex flex-col justify-center px-6 pt-safe pb-10 relative overflow-hidden">
       {/* Decorative floating shapes inside auth page */}
       <div className="absolute top-10 left-10 w-24 h-24 bg-purple-500/10 rounded-full blur-xl animate-float"></div>
       <div className="absolute bottom-20 right-10 w-32 h-32 bg-pink-500/10 rounded-full blur-xl animate-float" style={{ animationDelay: '2s' }}></div>

@@ -63,9 +63,8 @@ export function App() {
 
     // ─── Capacitor Native Notifications Click Actions Listener & StatusBar Setup ───
     if (Capacitor.isNativePlatform()) {
-      // Configure native status bar to prevent overlap with web layout
-      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
-      StatusBar.setBackgroundColor({ color: '#0b0a19' }).catch(() => {});
+      // Configure native status bar to overlay the webview (edge-to-edge)
+      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
 
       LocalNotifications.addListener('localNotificationActionPerformed', (action) => {

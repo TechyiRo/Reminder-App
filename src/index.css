@@ -150,3 +150,11 @@
 .slider-thumb:active {
   cursor: grabbing;
 }
+
+/* Safe Area Padding Utilities */
+.pt-safe {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+}
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
