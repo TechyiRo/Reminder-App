@@ -14,24 +14,49 @@ export function App() {
   const { user, currentScreen, activeRingingReminder } = useReminderStore();
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  // Register PWA Service Worker and prompt for notification permissions immediately
+  // ─── Service Worker & Background Notification Setup ────────────────────────
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(
-        (registration) => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        },
-        (err) => {
-          console.log('ServiceWorker registration failed: ', err);
-        }
-      );
-    }
+    const setupServiceWorker = async () => {
+      if (!('serviceWorker' in navigator)) return;
 
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().then((permission) => {
-        console.log('Notification permission status:', permission);
-      });
-    }
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        console.log('[App] SW registered:', registration.scope);
+
+        // Wait for SW to be active
+        await navigator.serviceWorker.ready;
+
+        // ── Request notification permission immediately on mount ──────────────
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          const perm = await Notification.requestPermission();
+          console.log('[App] Notification permission:', perm);
+        }
+
+        // ── Register Periodic Background Sync (Android Chrome PWA) ───────────
+        // This wakes up the SW every ~15 minutes even when app is closed
+        if ('periodicSync' in registration && Notification.permission === 'granted') {
+          try {
+            await (registration as any).periodicSync.register('periodic-reminder-check', {
+              minInterval: 15 * 60 * 1000 // minimum 15 minutes
+            });
+            console.log('[App] Periodic background sync registered');
+          } catch (err) {
+            console.warn('[App] Periodic sync not supported:', err);
+          }
+        }
+
+        // ── Tell SW to check all reminders right now ─────────────────────────
+        const sw = registration.active || registration.waiting || registration.installing;
+        if (sw) {
+          sw.postMessage({ type: 'CHECK_NOW' });
+        }
+
+      } catch (err) {
+        console.error('[App] SW registration failed:', err);
+      }
+    };
+
+    setupServiceWorker();
   }, []);
 
   const renderActiveScreen = () => {

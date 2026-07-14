@@ -83,35 +83,24 @@ function registerBackgroundSync() {
 }
 
 function scheduleBackgroundNotification(reminder: Reminder) {
-  if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window) {
-    if (Notification.permission === 'granted') {
-      navigator.serviceWorker.ready.then(registration => {
-        const triggerTime = new Date(`${reminder.date}T${reminder.time}`).getTime();
-        
-        // Skip if trigger time is in the past
-        if (triggerTime <= Date.now()) return;
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
-        const title = `Reminder: ${reminder.title}`;
-        const options: any = {
-          body: reminder.description || 'Task due now!',
-          icon: '/favicon.svg',
-          tag: reminder.id,
-          requireInteraction: true,
-          vibrate: [200, 100, 200, 100, 400],
-          sound: '/alarm.wav'
-        };
+  const triggerTime = new Date(`${reminder.date}T${reminder.time}:00`).getTime();
+  if (isNaN(triggerTime) || triggerTime <= Date.now()) return;
 
-        // Schedule background notification natively via TimestampTrigger if supported by browser
-        if ('TimestampTrigger' in window) {
-          options.showTrigger = new (window as any).TimestampTrigger(triggerTime);
-          registration.showNotification(title, options).catch(err => {
-            console.warn('Failed to schedule TimestampTrigger notification:', err);
-          });
-        }
-      });
+  // Post directly to active SW — SW handles TimestampTrigger / setTimeout internally
+  navigator.serviceWorker.ready.then(registration => {
+    const sw = registration.active;
+    if (sw) {
+      sw.postMessage({ type: 'SCHEDULE_REMINDER', reminder });
     }
-  }
+    // Also trigger a one-shot Background Sync to persist scheduling
+    if ('sync' in registration) {
+      (registration as any).sync.register('sync-reminders').catch(() => {});
+    }
+  }).catch(() => {});
 }
+
 
 function cancelBackgroundNotification(id: string) {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
