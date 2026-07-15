@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { dbSaveReminder, dbDeleteReminder, dbGetAllReminders, dbSaveUser, dbGetUser, dbSaveSettings, dbGetSettings } from './db';
+import { 
+  dbSaveReminder, dbDeleteReminder, dbGetAllReminders, 
+  dbSaveUser, dbGetUser, dbSaveSettings, dbGetSettings,
+  dbSaveVaultEntry, dbDeleteVaultEntry, dbGetAllVaultEntries,
+  dbSaveSecureNote, dbDeleteSecureNote, dbGetAllSecureNotes,
+  dbClearAllVaultData
+} from './db';
+import type { VaultEntry, SecureNote } from './db';
+import { generateSalt, hashPin } from '../utils/crypto';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -27,14 +35,25 @@ export interface AppSettings {
   soundOption: 'Ringtone + Notification' | 'Notification Only';
   vibrationEnabled: boolean;
   darkModeEnabled: boolean;
+  // Vault configuration
+  vaultPinHash?: string;
+  vaultPinSalt?: string;
+  vaultBiometricEnabled?: boolean;
+  vaultAutoLockTime?: 'immediate' | '1m' | '5m' | 'never';
+  vaultClipboardClearTime?: number; // 15, 30, 60
 }
 
 interface AppState {
   reminders: Reminder[];
   activeRingingReminder: Reminder | null;
-  currentScreen: 'dashboard' | 'calendar' | 'categories' | 'settings' | 'backup';
+  currentScreen: 'dashboard' | 'calendar' | 'vault' | 'categories' | 'settings' | 'backup';
   user: User | null;
   settings: AppSettings;
+  // SecureVault state
+  vaultEntries: VaultEntry[];
+  secureNotes: SecureNote[];
+  vaultKeyInMemory?: string; // Keep cleartext derived PIN temporarily in memory
+  vaultLocked: boolean;
 }
 
 // Simple state manager listeners
@@ -49,8 +68,14 @@ let state: AppState = {
     toneType: 'Default Tone',
     soundOption: 'Ringtone + Notification',
     vibrationEnabled: true,
-    darkModeEnabled: true
-  }))
+    darkModeEnabled: true,
+    vaultBiometricEnabled: false,
+    vaultAutoLockTime: '1m',
+    vaultClipboardClearTime: 30
+  })),
+  vaultEntries: [],
+  secureNotes: [],
+  vaultLocked: true
 };
 
 function saveToStorage() {
@@ -323,6 +348,126 @@ export const reminderStore = {
     if (reminder) {
       updateState({ activeRingingReminder: reminder });
     }
+  },
+
+  // ─── Vault Actions ─────────────────────────────────────────────────────────────
+
+  setupVaultPin: async (pin: string) => {
+    const salt = generateSalt();
+    const hash = await hashPin(pin, salt);
+    updateState(prev => ({
+      settings: {
+        ...prev.settings,
+        vaultPinHash: hash,
+        vaultPinSalt: salt
+      }
+    }));
+  },
+
+  unlockVault: async (pin: string): Promise<boolean> => {
+    const salt = state.settings.vaultPinSalt || '';
+    const correctHash = state.settings.vaultPinHash || '';
+    if (!correctHash) return false;
+
+    const testHash = await hashPin(pin, salt);
+    if (testHash === correctHash) {
+      updateState({
+        vaultKeyInMemory: pin,
+        vaultLocked: false
+      });
+      // Hydrate Vault data from IndexedDB
+      const [entries, notes] = await Promise.all([
+        dbGetAllVaultEntries(),
+        dbGetAllSecureNotes()
+      ]);
+      updateState({
+        vaultEntries: entries,
+        secureNotes: notes
+      });
+      return true;
+    }
+    return false;
+  },
+
+  lockVault: () => {
+    updateState({
+      vaultKeyInMemory: undefined,
+      vaultLocked: true,
+      vaultEntries: [],
+      secureNotes: []
+    });
+  },
+
+  addVaultEntry: async (entry: Omit<VaultEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    const newEntry: VaultEntry = {
+      ...entry,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    await dbSaveVaultEntry(newEntry);
+    const updatedEntries = await dbGetAllVaultEntries();
+    updateState({ vaultEntries: updatedEntries });
+  },
+
+  deleteVaultEntry: async (id: string) => {
+    await dbDeleteVaultEntry(id);
+    const updatedEntries = await dbGetAllVaultEntries();
+    updateState({ vaultEntries: updatedEntries });
+  },
+
+  addSecureNote: async (note: Omit<SecureNote, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    const newNote: SecureNote = {
+      ...note,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    await dbSaveSecureNote(newNote);
+    const updatedNotes = await dbGetAllSecureNotes();
+    updateState({ secureNotes: updatedNotes });
+  },
+
+  deleteSecureNote: async (id: string) => {
+    await dbDeleteSecureNote(id);
+    const updatedNotes = await dbGetAllSecureNotes();
+    updateState({ secureNotes: updatedNotes });
+  },
+
+  updateSecureNote: async (id: string, title: string, body: string) => {
+    const note = state.secureNotes.find(n => n.id === id);
+    if (note) {
+      const now = Date.now();
+      const updatedNote: SecureNote = {
+        ...note,
+        title,
+        body,
+        updatedAt: now
+      };
+      await dbSaveSecureNote(updatedNote);
+      const updatedNotes = await dbGetAllSecureNotes();
+      updateState({ secureNotes: updatedNotes });
+    }
+  },
+
+  resetVault: async () => {
+    await dbClearAllVaultData();
+    updateState(prev => ({
+      settings: {
+        ...prev.settings,
+        vaultPinHash: undefined,
+        vaultPinSalt: undefined,
+        vaultBiometricEnabled: false
+      },
+      vaultKeyInMemory: undefined,
+      vaultLocked: true,
+      vaultEntries: [],
+      secureNotes: []
+    }));
   }
 };
 
@@ -354,6 +499,16 @@ export function useReminderStore() {
     updateSettings: reminderStore.updateSettings,
     triggerReminderImmediately: reminderStore.triggerReminderImmediately,
     updateUser: reminderStore.updateUser,
+    // Vault exports
+    setupVaultPin: reminderStore.setupVaultPin,
+    unlockVault: reminderStore.unlockVault,
+    lockVault: reminderStore.lockVault,
+    addVaultEntry: reminderStore.addVaultEntry,
+    deleteVaultEntry: reminderStore.deleteVaultEntry,
+    addSecureNote: reminderStore.addSecureNote,
+    deleteSecureNote: reminderStore.deleteSecureNote,
+    updateSecureNote: reminderStore.updateSecureNote,
+    resetVault: reminderStore.resetVault,
   };
 }
 

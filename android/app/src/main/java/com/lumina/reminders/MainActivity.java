@@ -10,5 +10,10 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         // Enable edge-to-edge layout natively so that the gradient background extends behind the status bar
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // Secure screen content by disabling screenshots and screen recordings (FLAG_SECURE)
+        getWindow().setFlags(
+            android.view.WindowManager.LayoutParams.FLAG_SECURE,
+            android.view.WindowManager.LayoutParams.FLAG_SECURE
+        );
     }
 }

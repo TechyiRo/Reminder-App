@@ -1,17 +1,20 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Bell, Smartphone, Grid, Calendar, Settings as SettingsIcon,
+  Bell, Smartphone, Grid, 
   ChevronRight, LogOut, ShieldAlert, Sparkles, Music, Database, Download,
-  Camera, Pencil, X, Check, User as UserIcon, Trash2
+  Camera, Pencil, X, Check, User as UserIcon, Trash2, Fingerprint, Lock, CheckSquare
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import { playAmbientAlert, stopAmbientAlert } from '../utils/audio';
+import { hashPin } from '../utils/crypto';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { Capacitor } from '@capacitor/core';
 
-export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
+export function SettingsView() {
   const { 
-    user, currentScreen, setScreen, settings, updateSettings, logout, 
-    reminders, setActiveRingingReminder, updateUser
+    user, setScreen, settings, updateSettings, logout, 
+    reminders, setActiveRingingReminder, updateUser, resetVault
   } = useReminderStore();
 
   // ─── Profile edit state ────────────────────────────────────────────────────
@@ -337,6 +340,21 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
           </div>
         </button>
 
+        {/* Manage Categories Card */}
+        <button
+          onClick={() => setScreen('categories')}
+          className="w-full glass-panel rounded-2xl p-4 flex items-center gap-3 mb-5 shrink-0 border border-purple-500/20 bg-purple-600/5 hover:bg-purple-600/10 active:scale-[0.98] transition-all text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/40 to-pink-600/40 border border-purple-500/30 flex items-center justify-center shrink-0">
+            <Grid size={18} className="text-purple-300 rotate-45" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-bold text-white/90">Categories</p>
+            <p className="text-[9px] text-white/40 mt-0.5">Filter and view reminders by category</p>
+          </div>
+          <ChevronRight size={14} className="text-white/30" />
+        </button>
+
         {/* Group 1: Notifications settings */}
         <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">Notifications</h4>
         
@@ -466,6 +484,136 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
           })}
         </div>
 
+        {/* Group 2.5: SecureVault Settings */}
+        <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">SecureVault Security</h4>
+
+        <div className="glass-panel rounded-2xl p-4 flex flex-col gap-4 mb-5 shrink-0">
+          {/* Biometrics Toggle (Mobile only) */}
+          {Capacitor.isNativePlatform() && settings.vaultPinHash && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Fingerprint size={16} className="text-white/60" />
+                <div>
+                  <p className="text-xs font-semibold text-white/95">Biometric Unlock</p>
+                  <p className="text-[9px] text-white/40 mt-0.5">Use Fingerprint / Face ID to unlock</p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  const currentVal = !!settings.vaultBiometricEnabled;
+                  if (!currentVal) {
+                    // Check support before enabling
+                    try {
+                      const availability = await NativeBiometric.isAvailable();
+                      if (availability.isAvailable) {
+                        // Request user password to store it in keystore
+                        const currentPin = window.prompt("Confirm your 4-digit Master PIN to enroll biometrics:");
+                        if (currentPin) {
+                          const correctHash = settings.vaultPinHash || '';
+                          const salt = settings.vaultPinSalt || '';
+                          const testHash = await hashPin(currentPin, salt);
+                          if (testHash === correctHash) {
+                            await NativeBiometric.setCredentials({
+                              username: 'vault',
+                              password: currentPin,
+                              server: 'SecureVault'
+                            });
+                            updateSettings({ vaultBiometricEnabled: true });
+                            alert("Biometric enrollment successful!");
+                          } else {
+                            alert("Incorrect PIN. Enrollment cancelled.");
+                          }
+                        }
+                      } else {
+                        alert("Biometric hardware is not supported or enrolled on this device.");
+                      }
+                    } catch (err) {
+                      alert("Failed to enroll biometrics.");
+                    }
+                  } else {
+                    updateSettings({ vaultBiometricEnabled: false });
+                  }
+                }}
+                className={`w-11 h-6 rounded-full transition-all duration-300 p-0.5 ${
+                  settings.vaultBiometricEnabled ? 'bg-violet-600' : 'bg-white/10'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full bg-white transition-all duration-300 ${
+                  settings.vaultBiometricEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}></div>
+              </button>
+            </div>
+          )}
+
+          {/* Auto Lock Delay Select */}
+          {settings.vaultPinHash && (
+            <div className="flex items-center justify-between border-t border-white/5 pt-3">
+              <div className="flex items-center gap-2.5">
+                <Lock size={16} className="text-white/60" />
+                <div>
+                  <p className="text-xs font-semibold text-white/95">Auto-Lock Timeout</p>
+                  <p className="text-[9px] text-white/40 mt-0.5">Lock vault when app runs in background</p>
+                </div>
+              </div>
+              <select
+                value={settings.vaultAutoLockTime || '1m'}
+                onChange={(e) => updateSettings({ vaultAutoLockTime: e.target.value as any })}
+                className="bg-black/40 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white/80 font-semibold outline-none focus:border-violet-500/40"
+              >
+                <option value="immediate">Immediate</option>
+                <option value="1m">1 Minute</option>
+                <option value="5m">5 Minutes</option>
+                <option value="never">Never</option>
+              </select>
+            </div>
+          )}
+
+          {/* Clipboard Clear Timeout */}
+          {settings.vaultPinHash && (
+            <div className="flex items-center justify-between border-t border-white/5 pt-3">
+              <div className="flex items-center gap-2.5">
+                <CheckSquare size={16} className="text-white/60" />
+                <div>
+                  <p className="text-xs font-semibold text-white/95">Clear Clipboard Delay</p>
+                  <p className="text-[9px] text-white/40 mt-0.5">Wipe copied passwords from clipboard</p>
+                </div>
+              </div>
+              <select
+                value={settings.vaultClipboardClearTime || 30}
+                onChange={(e) => updateSettings({ vaultClipboardClearTime: Number(e.target.value) })}
+                className="bg-black/40 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white/80 font-semibold outline-none focus:border-violet-500/40"
+              >
+                <option value={15}>15 seconds</option>
+                <option value={30}>30 seconds</option>
+                <option value={60}>1 minute</option>
+              </select>
+            </div>
+          )}
+
+          {/* Reset Vault / Wiping database */}
+          {settings.vaultPinHash && (
+            <div className="flex items-center justify-between border-t border-white/5 pt-3">
+              <div className="flex flex-col">
+                <p className="text-xs font-semibold text-red-400">Wipe / Reset Vault</p>
+                <p className="text-[9px] text-white/40 mt-0.5">Deletes all credentials and notes permanently</p>
+              </div>
+              <button
+                onClick={() => {
+                  if (window.confirm("WARNING: Wiping the vault will permanently delete all secure credentials and notes. This cannot be undone. Are you absolutely sure?")) {
+                    resetVault().then(() => {
+                      alert("Vault wiped and reset successfully.");
+                      window.location.reload();
+                    });
+                  }
+                }}
+                className="text-[10px] bg-red-950/20 border border-red-500/20 text-red-400 px-2.5 py-1 rounded-lg font-bold hover:bg-red-900/30"
+              >
+                Reset Vault
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Group 3: Simulation & Troubleshooting */}
         <h4 className="text-[9px] font-bold text-white/40 tracking-wider uppercase mb-2 ml-1 shrink-0">Simulators & Tests</h4>
 
@@ -503,60 +651,6 @@ export function SettingsView({ onAddClick }: { onAddClick: () => void }) {
           <span>Sign Out / Lock App</span>
         </button>
 
-      </div>
-
-      {/* Navigation bar replicated */}
-      <div className="w-full pb-4">
-        <div className="glass-panel-dark rounded-2xl h-14 px-4 flex items-center justify-between z-40 relative">
-          <button 
-            onClick={() => setScreen('dashboard')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'dashboard' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Grid size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Home</span>
-          </button>
-
-          <button 
-            onClick={() => setScreen('calendar')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'calendar' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Calendar size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Calendar</span>
-          </button>
-
-          <div className="relative -top-4 px-2">
-            <button
-              onClick={onAddClick}
-              className="w-12 h-12 rounded-full glass-button-primary flex items-center justify-center text-white shadow-lg shadow-purple-500/40 border border-white/25 focus:outline-none"
-            >
-              <ChevronRight size={24} className="rotate-90" />
-            </button>
-          </div>
-
-          <button 
-            onClick={() => setScreen('categories')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'categories' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Grid size={18} className="rotate-45" />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Categories</span>
-          </button>
-
-          <button 
-            onClick={() => setScreen('settings')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'settings' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <SettingsIcon size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Settings</span>
-          </button>
-        </div>
       </div>
 
     </div>

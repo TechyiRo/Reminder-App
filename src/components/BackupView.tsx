@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Grid, Calendar, Settings as SettingsIcon,
   Download, Upload, Shield, Clock, Database,
   CheckCircle2, AlertTriangle, Loader2, HardDrive,
-  RefreshCw, Trash2, ChevronRight, Info
+  RefreshCw, Trash2, Info
 } from 'lucide-react';
-import { useReminderStore } from '../store/reminderStore';
 import { dbGetBackupMeta, dbDeleteBackupMeta, type BackupMeta } from '../store/db';
 import {
   downloadBackup, restoreFromFile, getStorageInfo,
@@ -15,8 +13,7 @@ import {
 
 type Status = { type: 'idle' | 'loading' | 'success' | 'error'; message: string };
 
-export function BackupView({ onAddClick }: { onAddClick: () => void }) {
-  const { currentScreen, setScreen } = useReminderStore();
+export function BackupView() {
 
   const [backupMetas, setBackupMetas] = useState<BackupMeta[]>([]);
   const [storageInfo, setStorageInfo] = useState({ reminderCount: 0, storageUsedBytes: 0 });
@@ -364,33 +361,6 @@ export function BackupView({ onAddClick }: { onAddClick: () => void }) {
           </div>
         </div>
 
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="w-full pb-4 shrink-0">
-        <div className="glass-panel-dark rounded-2xl h-14 px-4 flex items-center justify-between z-40 relative">
-          <button onClick={() => setScreen('dashboard')} className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${currentScreen === 'dashboard' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'}`}>
-            <Grid size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Home</span>
-          </button>
-          <button onClick={() => setScreen('calendar')} className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${currentScreen === 'calendar' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'}`}>
-            <Calendar size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Calendar</span>
-          </button>
-          <div className="relative -top-4 px-2">
-            <button onClick={onAddClick} className="w-12 h-12 rounded-full glass-button-primary flex items-center justify-center text-white shadow-lg shadow-purple-500/40 border border-white/25 focus:outline-none">
-              <ChevronRight size={24} className="rotate-90" />
-            </button>
-          </div>
-          <button onClick={() => setScreen('categories')} className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${currentScreen === 'categories' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'}`}>
-            <Grid size={18} className="rotate-45" />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Categories</span>
-          </button>
-          <button onClick={() => setScreen('settings')} className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${currentScreen === 'settings' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'}`}>
-            <SettingsIcon size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Settings</span>
-          </button>
-        </div>
       </div>
     </div>
   );

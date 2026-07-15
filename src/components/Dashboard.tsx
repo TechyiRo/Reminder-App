@@ -1,20 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  CheckCircle, Plus, Calendar, Settings, Grid, Bell, BellOff, Trash2, 
+  CheckCircle, Bell, BellOff, Trash2, 
   Play, ChevronRight, AlertCircle, Clock
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import type { Reminder } from '../store/reminderStore';
 import confetti from 'canvas-confetti';
 
-interface DashboardProps {
-  onAddClick: () => void;
-}
-
-export function Dashboard({ onAddClick }: DashboardProps) {
+export function Dashboard() {
   const { 
-    reminders, user, currentScreen, setScreen, toggleCompleteReminder, 
+    reminders, user, setScreen, toggleCompleteReminder, 
     deleteReminder, triggerReminderImmediately, settings, updateSettings 
   } = useReminderStore();
 
@@ -353,67 +349,6 @@ export function Dashboard({ onAddClick }: DashboardProps) {
               })
             )}
           </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Navigation Bar Panel (Centred inside device frame, absolute bottom) */}
-      <div className="w-full pb-4 select-none">
-        <div className="glass-panel-dark rounded-2xl h-14 px-4 flex items-center justify-between z-40 relative">
-          {/* Dashboard Tab */}
-          <button 
-            onClick={() => setScreen('dashboard')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'dashboard' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Grid size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Home</span>
-          </button>
-
-          {/* Calendar Tab */}
-          <button 
-            onClick={() => setScreen('calendar')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'calendar' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Calendar size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Calendar</span>
-          </button>
-
-          {/* Centred Big Add Plus Button */}
-          <div className="relative -top-4 px-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.93 }}
-              onClick={onAddClick}
-              className="w-12 h-12 rounded-full glass-button-primary flex items-center justify-center text-white shadow-lg shadow-purple-500/40 border border-white/25 focus:outline-none"
-            >
-              <Plus size={24} />
-            </motion.button>
-          </div>
-
-          {/* Categories Tab */}
-          <button 
-            onClick={() => setScreen('categories')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'categories' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Grid size={18} className="rotate-45" />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Categories</span>
-          </button>
-
-          {/* Settings Tab */}
-          <button 
-            onClick={() => setScreen('settings')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'settings' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Settings size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Settings</span>
-          </button>
         </div>
       </div>
     </div>

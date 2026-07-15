@@ -14,19 +14,43 @@ export interface BackupMeta {
   reminderCount: number;
 }
 
+export interface VaultEntry {
+  id: string;
+  siteName: string;
+  username: string;
+  encryptedPassword: string; // Base64 ciphertext
+  passwordIv: string;        // Base64 IV
+  url: string;
+  notes: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SecureNote {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export class LuminaDatabase extends Dexie {
   reminders!: Table<Reminder, string>;
   users!: Table<User & { id: string }, string>;
   settings!: Table<AppSettings & { id: string }, string>;
   backups!: Table<BackupMeta, number>;
+  vault_entries!: Table<VaultEntry, string>;
+  secure_notes!: Table<SecureNote, string>;
 
   constructor() {
     super('LuminaRemindersDB');
-    this.version(2).stores({
+    this.version(3).stores({
       reminders: 'id, date, time, completed, triggered, category, priority',
       users: 'id',
       settings: 'id',
       backups: '++id, createdAt, version',
+      vault_entries: 'id, siteName, username, createdAt',
+      secure_notes: 'id, title, createdAt'
     });
   }
 }
@@ -92,4 +116,39 @@ export async function dbGetBackupMeta(): Promise<BackupMeta[]> {
 
 export async function dbDeleteBackupMeta(id: number) {
   await db.backups.delete(id);
+}
+
+// ─── Vault helpers ─────────────────────────────────────────────────────────────
+
+export async function dbSaveVaultEntry(entry: VaultEntry) {
+  await db.vault_entries.put(entry);
+}
+
+export async function dbDeleteVaultEntry(id: string) {
+  await db.vault_entries.delete(id);
+}
+
+export async function dbGetAllVaultEntries(): Promise<VaultEntry[]> {
+  return db.vault_entries.orderBy('createdAt').reverse().toArray();
+}
+
+// ─── Secure Notes helpers ──────────────────────────────────────────────────────
+
+export async function dbSaveSecureNote(note: SecureNote) {
+  await db.secure_notes.put(note);
+}
+
+export async function dbDeleteSecureNote(id: string) {
+  await db.secure_notes.delete(id);
+}
+
+export async function dbGetAllSecureNotes(): Promise<SecureNote[]> {
+  return db.secure_notes.orderBy('createdAt').reverse().toArray();
+}
+
+export async function dbClearAllVaultData() {
+  await Promise.all([
+    db.vault_entries.clear(),
+    db.secure_notes.clear()
+  ]);
 }

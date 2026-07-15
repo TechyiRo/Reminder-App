@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Briefcase, User, Heart, BookOpen, Layers, Grid, Calendar, Settings, 
-  ChevronRight, Clock, CheckCircle, Play, Trash2
+  Briefcase, User, Heart, BookOpen, Layers, 
+  Clock, CheckCircle, Play, Trash2, Calendar
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import type { Reminder } from '../store/reminderStore';
 import confetti from 'canvas-confetti';
 
-export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
+export function CategoriesView() {
   const { 
-    reminders, currentScreen, setScreen, toggleCompleteReminder, 
+    reminders, toggleCompleteReminder, 
     deleteReminder, triggerReminderImmediately
   } = useReminderStore();
 
@@ -185,61 +185,6 @@ export function CategoriesView({ onAddClick }: { onAddClick: () => void }) {
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Navigation bar replicated */}
-      <div className="w-full pb-4">
-        <div className="glass-panel-dark rounded-2xl h-14 px-4 flex items-center justify-between z-40 relative">
-          <button 
-            onClick={() => setScreen('dashboard')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'dashboard' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Grid size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Home</span>
-          </button>
-
-          <button 
-            onClick={() => setScreen('calendar')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'calendar' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Calendar size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Calendar</span>
-          </button>
-
-          <div className="relative -top-4 px-2">
-            <button
-              onClick={onAddClick}
-              className="w-12 h-12 rounded-full glass-button-primary flex items-center justify-center text-white shadow-lg shadow-purple-500/40 border border-white/25 focus:outline-none"
-            >
-              <ChevronRight size={24} className="rotate-90" />
-            </button>
-          </div>
-
-          <button 
-            onClick={() => setScreen('categories')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'categories' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Grid size={18} className="rotate-45" />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Categories</span>
-          </button>
-
-          <button 
-            onClick={() => setScreen('settings')}
-            className={`flex flex-col items-center gap-0.5 justify-center flex-1 py-1 ${
-              currentScreen === 'settings' ? 'text-violet-400' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            <Settings size={18} />
-            <span className="text-[8px] font-bold uppercase tracking-wider">Settings</span>
-          </button>
-        </div>
-      </div>
-
     </div>
   );
 }
