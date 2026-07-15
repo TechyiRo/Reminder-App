@@ -60,17 +60,8 @@ export default function LockScreen({ onUnlockSuccess }: LockScreenProps) {
   const triggerBiometricAuth = async () => {
     if (lockoutUntil > Date.now()) return;
     try {
-      // Trigger native fingerprint / Face ID prompt
-      await NativeBiometric.verifyIdentity({
-        reason: 'Authenticate to unlock your SecureVault',
-        title: 'SecureVault Authentication',
-        subtitle: 'Verify identity to continue',
-        description: 'Verify your fingerprint or face to retrieve your vault keys.',
-        negativeButtonText: 'Cancel'
-      });
-
-      // Retrieve PIN credentials from Android Keystore / iOS Keychain
-      const credentials = await NativeBiometric.getCredentials({
+      // Retrieve secure credentials, automatically triggering the native biometric prompt bound to Keystore keys
+      const credentials = await NativeBiometric.getSecureCredentials({
         server: 'SecureVault'
       });
 

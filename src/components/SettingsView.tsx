@@ -8,7 +8,7 @@ import {
 import { useReminderStore } from '../store/reminderStore';
 import { playAmbientAlert, stopAmbientAlert } from '../utils/audio';
 import { hashPin } from '../utils/crypto';
-import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { NativeBiometric, AccessControl } from '@capgo/capacitor-native-biometric';
 import { Capacitor } from '@capacitor/core';
 
 export function SettingsView() {
@@ -516,7 +516,8 @@ export function SettingsView() {
                             await NativeBiometric.setCredentials({
                               username: 'vault',
                               password: currentPin,
-                              server: 'SecureVault'
+                              server: 'SecureVault',
+                              accessControl: AccessControl.BIOMETRY_ANY
                             });
                             updateSettings({ vaultBiometricEnabled: true });
                             alert("Biometric enrollment successful!");

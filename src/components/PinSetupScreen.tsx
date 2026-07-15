@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, CheckCircle2, Fingerprint, AlertCircle } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
-import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { NativeBiometric, AccessControl } from '@capgo/capacitor-native-biometric';
 import { Capacitor } from '@capacitor/core';
 
 interface PinSetupScreenProps {
@@ -89,7 +89,8 @@ export default function PinSetupScreen({ onSetupSuccess }: PinSetupScreenProps) 
       await NativeBiometric.setCredentials({
         username: 'vault',
         password: pin,
-        server: 'SecureVault'
+        server: 'SecureVault',
+        accessControl: AccessControl.BIOMETRY_ANY
       });
       // Save setting
       updateSettings({ vaultBiometricEnabled: true });

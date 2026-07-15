@@ -2,12 +2,93 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, Lock, KeyRound, FileText, Search, Plus, Eye, EyeOff, 
-  Copy, Trash2, ExternalLink, X, RefreshCw, Key, ChevronDown, CheckSquare, Edit3
+  Copy, Trash2, ExternalLink, X, RefreshCw, Key, ChevronDown, CheckSquare, Edit3,
+  Mail, Play, Globe, Briefcase, CreditCard, ShoppingBag, ArrowLeft, Folder
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import { encryptPassword, decryptPassword, generateStrongPassword } from '../utils/crypto';
 import LockScreen from './LockScreen';
 import PinSetupScreen from './PinSetupScreen';
+import type { VaultEntry } from '../store/db';
+
+// Helper to extract domain from URL for dynamic favicon loading
+const getDomainFromUrl = (urlStr?: string) => {
+  if (!urlStr) return '';
+  try {
+    const clean = urlStr.replace(/^(https?:\/\/)?(www\.)?/, '');
+    return clean.split('/')[0];
+  } catch {
+    return '';
+  }
+};
+
+// Brand helper mapping to provide custom logos, icons, and colors
+const getBrandDetails = (categoryName: string, url?: string) => {
+  const name = categoryName.toLowerCase();
+  const domain = getDomainFromUrl(url).toLowerCase();
+
+  // 1. Gmail / Google
+  if (name.includes('gmail') || name.includes('google') || domain.includes('gmail') || domain.includes('google')) {
+    return {
+      icon: Mail,
+      iconColor: 'text-red-400',
+      gradient: 'from-red-500/20 to-orange-500/10',
+      bgGlow: 'shadow-red-500/10'
+    };
+  }
+  // 2. Netflix
+  if (name.includes('netflix') || domain.includes('netflix')) {
+    return {
+      icon: Play,
+      iconColor: 'text-red-600',
+      gradient: 'from-red-600/20 to-red-800/10',
+      bgGlow: 'shadow-red-600/10'
+    };
+  }
+  // 3. Social Media
+  if (name.includes('social') || name.includes('facebook') || name.includes('instagram') || name.includes('twitter') || name.includes('linkedin') || domain.includes('facebook') || domain.includes('instagram') || domain.includes('twitter') || domain.includes('linkedin')) {
+    return {
+      icon: Globe,
+      iconColor: 'text-blue-400',
+      gradient: 'from-blue-500/20 to-cyan-500/10',
+      bgGlow: 'shadow-blue-500/10'
+    };
+  }
+  // 4. Finance
+  if (name.includes('finance') || name.includes('bank') || name.includes('card') || name.includes('crypto') || domain.includes('paypal') || domain.includes('bank')) {
+    return {
+      icon: CreditCard,
+      iconColor: 'text-amber-400',
+      gradient: 'from-amber-500/20 to-yellow-500/10',
+      bgGlow: 'shadow-amber-500/10'
+    };
+  }
+  // 5. Work
+  if (name.includes('work') || name.includes('office') || name.includes('job') || name.includes('corporate')) {
+    return {
+      icon: Briefcase,
+      iconColor: 'text-indigo-400',
+      gradient: 'from-indigo-500/20 to-violet-500/10',
+      bgGlow: 'shadow-indigo-500/10'
+    };
+  }
+  // 6. Shopping
+  if (name.includes('shopping') || name.includes('amazon') || name.includes('ebay') || domain.includes('amazon') || domain.includes('ebay')) {
+    return {
+      icon: ShoppingBag,
+      iconColor: 'text-pink-400',
+      gradient: 'from-pink-500/20 to-rose-500/10',
+      bgGlow: 'shadow-pink-500/10'
+    };
+  }
+  // 7. Fallback Default Other
+  return {
+    icon: Key,
+    iconColor: 'text-violet-300',
+    gradient: 'from-violet-500/20 to-fuchsia-500/10',
+    bgGlow: 'shadow-violet-500/10'
+  };
+};
 
 export default function VaultView() {
   const { 
@@ -19,12 +100,15 @@ export default function VaultView() {
   const [activeTab, setActiveTab] = useState<'credentials' | 'notes'>('credentials');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Sheet modals
+  // Categories states
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Modals
   const [isAddEntryOpen, setIsAddEntryOpen] = useState(false);
   const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
   const [isEditNoteOpen, setIsEditNoteOpen] = useState(false);
 
-  // Password Reveal States (id -> decrypted password string)
+  // Password Reveal
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
@@ -34,21 +118,23 @@ export default function VaultView() {
   const [password, setPassword] = useState('');
   const [url, setUrl] = useState('');
   const [entryNotes, setEntryNotes] = useState('');
-
-  // Password generator config
-  const genLength = 16;
-  const genSymbols = true;
-  const genNumbers = true;
+  
+  // Category settings
+  const [categoryType, setCategoryType] = useState<'select' | 'custom'>('select');
+  const [selectedCategoryName, setSelectedCategoryName] = useState('Gmail');
+  const [customCategoryName, setCustomCategoryName] = useState('');
 
   // Notes inputs
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
-  // Toast feedback state
+  // Toast alert
   const [toastMessage, setToastMessage] = useState('');
 
-  // Auto-dismiss toast
+  // Favicon error handler helper
+  const [faviconLoadError, setFaviconLoadError] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (toastMessage) {
       const t = setTimeout(() => setToastMessage(''), 2500);
@@ -56,12 +142,10 @@ export default function VaultView() {
     }
   }, [toastMessage]);
 
-  // Show PIN Setup if not set up
   if (!settings.vaultPinHash) {
     return <PinSetupScreen onSetupSuccess={() => {}} />;
   }
 
-  // Show Lock Screen if locked
   if (vaultLocked) {
     return <LockScreen onUnlockSuccess={() => {}} />;
   }
@@ -77,7 +161,6 @@ export default function VaultView() {
     showToast(`${label} copied to clipboard!`);
 
     if (isSensitive) {
-      // Clear clipboard after setting timer
       const timeoutSec = settings.vaultClipboardClearTime || 30;
       showToast(`${label} copied! Clipboard clears in ${timeoutSec}s.`);
       setTimeout(() => {
@@ -95,7 +178,6 @@ export default function VaultView() {
 
   const handleRevealPassword = async (entryId: string, enc: string, iv: string) => {
     if (revealedPasswords[entryId]) {
-      // Hide
       setRevealedPasswords(prev => {
         const copy = { ...prev };
         delete copy[entryId];
@@ -121,6 +203,12 @@ export default function VaultView() {
       return;
     }
 
+    const finalCategory = categoryType === 'select' ? selectedCategoryName : customCategoryName.trim();
+    if (!finalCategory) {
+      showToast('Category name cannot be empty');
+      return;
+    }
+
     try {
       const pin = vaultKeyInMemory || '';
       const salt = settings.vaultPinSalt || '';
@@ -132,7 +220,8 @@ export default function VaultView() {
         encryptedPassword: encrypted.ciphertext,
         passwordIv: encrypted.iv,
         url,
-        notes: entryNotes
+        notes: entryNotes,
+        category: finalCategory
       });
 
       showToast('Credential saved securely');
@@ -149,10 +238,12 @@ export default function VaultView() {
     setPassword('');
     setUrl('');
     setEntryNotes('');
+    setCustomCategoryName('');
+    setCategoryType('select');
   };
 
   const handleGeneratePassword = () => {
-    const pass = generateStrongPassword(genLength, genSymbols, genNumbers);
+    const pass = generateStrongPassword(16, true, true);
     setPassword(pass);
     showToast('Strong password generated!');
   };
@@ -196,12 +287,30 @@ export default function VaultView() {
     setIsEditNoteOpen(true);
   };
 
-  // ─── FILTERS ────────────────────────────────────────────────────────────────
+  // ─── CATEGORY & FILTER COMPUTATION ──────────────────────────────────────────
 
-  const filteredEntries = vaultEntries.filter(entry => 
-    entry.siteName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Group credentials by category dynamically
+  const categoriesGroup = vaultEntries.reduce<Record<string, VaultEntry[]>>((acc, entry) => {
+    const cat = entry.category || 'Other';
+    if (!acc[cat]) {
+      acc[cat] = [];
+    }
+    acc[cat].push(entry);
+    return acc;
+  }, {});
+
+  const allCategoryNames = Object.keys(categoriesGroup).sort();
+
+  // Search filtering
+  const filteredCategoryNames = allCategoryNames.filter(name => {
+    const entries = categoriesGroup[name];
+    const matchCatName = name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchInnerEntries = entries.some(e => 
+      e.siteName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    return matchCatName || matchInnerEntries;
+  });
 
   const filteredNotes = secureNotes.filter(note =>
     note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -210,7 +319,7 @@ export default function VaultView() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0915] text-white relative">
-      {/* Dynamic Background */}
+      {/* Glow Effects */}
       <div className="absolute top-0 left-0 w-full h-52 bg-gradient-to-b from-purple-900/10 via-[#0a0915] to-[#0a0915] pointer-events-none z-0" />
 
       {/* Header section */}
@@ -234,11 +343,11 @@ export default function VaultView() {
         </button>
       </div>
 
-      {/* Tab Segment Controls */}
+      {/* Segment Selector */}
       <div className="px-5 mb-4 shrink-0 z-10">
         <div className="bg-white/5 border border-white/8 rounded-2xl p-1 flex">
           <button
-            onClick={() => { setActiveTab('credentials'); setSearchQuery(''); }}
+            onClick={() => { setActiveTab('credentials'); setSearchQuery(''); setSelectedCategory(null); }}
             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeTab === 'credentials' 
                 ? 'bg-violet-600 text-white shadow-md shadow-violet-900/30' 
@@ -262,7 +371,7 @@ export default function VaultView() {
         </div>
       </div>
 
-      {/* Search Filter input */}
+      {/* Filter / Search input */}
       <div className="px-5 mb-4 shrink-0 z-10">
         <div className="relative">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35" />
@@ -270,7 +379,11 @@ export default function VaultView() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeTab === 'credentials' ? "Search credentials..." : "Search secure notes..."}
+            placeholder={
+              activeTab === 'credentials' 
+                ? (selectedCategory ? `Search in ${selectedCategory}...` : "Search category or account...") 
+                : "Search secure notes..."
+            }
             className="w-full bg-white/5 border border-white/8 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-violet-500/40 focus:bg-violet-600/5 transition-all"
           />
           {searchQuery && (
@@ -281,21 +394,92 @@ export default function VaultView() {
         </div>
       </div>
 
-      {/* Main content list */}
+      {/* View Content area */}
       <div className="flex-1 overflow-y-auto px-5 pb-6 z-10">
         {activeTab === 'credentials' ? (
-          /* CREDENTIALS TAB LIST */
-          <div className="flex flex-col gap-3">
-            {filteredEntries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <KeyRound size={32} className="text-white/20 mb-3" />
-                <p className="text-xs text-white/50">No credentials found</p>
-                <p className="text-[10px] text-white/30 mt-1">Tap the plus button below to save one</p>
-              </div>
-            ) : (
-              filteredEntries.map(entry => {
+          /* CREDENTIALS MAIN AREA */
+          selectedCategory === null ? (
+            /* CATEGORY GRID LIST VIEW (Apple-style 3D Glassmorphism) */
+            <div className="grid grid-cols-2 gap-3.5">
+              {filteredCategoryNames.length === 0 ? (
+                <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
+                  <Folder size={32} className="text-white/20 mb-3" />
+                  <p className="text-xs text-white/50">No password categories</p>
+                  <p className="text-[10px] text-white/30 mt-1">Tap the plus button below to create one</p>
+                </div>
+              ) : (
+                filteredCategoryNames.map(name => {
+                  const entries = categoriesGroup[name];
+                  const domain = entries[0]?.url ? getDomainFromUrl(entries[0].url) : '';
+                  const brand = getBrandDetails(name, entries[0]?.url);
+                  const IconComponent = brand.icon;
+                  const isFaviconWorking = domain && !faviconLoadError[name];
+
+                  return (
+                    <motion.button
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.97 }}
+                      key={name}
+                      onClick={() => setSelectedCategory(name)}
+                      className="glass-panel text-left p-4 rounded-2xl border border-white/8 hover:border-violet-500/25 active:border-violet-500/30 transition-all flex flex-col justify-between h-32 relative overflow-hidden group shadow-lg"
+                    >
+                      {/* Interactive Glow Backdrops */}
+                      <div className="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br from-violet-600/10 to-transparent rounded-full blur-2xl group-hover:scale-125 transition-transform" />
+                      
+                      {/* Logo Icon Area */}
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${brand.gradient} border border-white/10 flex items-center justify-center shrink-0 shadow-md ${brand.bgGlow}`}>
+                        {isFaviconWorking ? (
+                          <img
+                            src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+                            alt={name}
+                            onError={() => setFaviconLoadError(prev => ({ ...prev, [name]: true }))}
+                            className="w-5 h-5 rounded object-contain"
+                          />
+                        ) : (
+                          <IconComponent size={18} className={brand.iconColor} />
+                        )}
+                      </div>
+
+                      {/* Info Meta */}
+                      <div className="mt-4">
+                        <h3 className="text-xs font-bold text-white/95 line-clamp-1">{name}</h3>
+                        <p className="text-[9px] text-white/40 font-semibold mt-0.5 uppercase tracking-wide">
+                          {entries.length} {entries.length === 1 ? 'credential' : 'credentials'}
+                        </p>
+                      </div>
+                    </motion.button>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            /* ACCORDION CREDENTIAL LIST FOR SELECTED CATEGORY */
+            <div className="flex flex-col gap-3">
+              {/* Back breadcrumb */}
+              <button
+                onClick={() => { setSelectedCategory(null); setExpandedEntryId(null); }}
+                className="self-start flex items-center gap-1.5 text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors mb-2"
+              >
+                <ArrowLeft size={13} />
+                Back to Categories
+              </button>
+
+              <h2 className="text-sm font-bold font-display text-white/90 mb-1 px-1">
+                Category: {selectedCategory}
+              </h2>
+
+              {categoriesGroup[selectedCategory]?.filter(entry => 
+                entry.siteName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                entry.username.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map(entry => {
                 const isExpanded = expandedEntryId === entry.id;
                 const decryptedPass = revealedPasswords[entry.id];
+                const domain = getDomainFromUrl(entry.url);
+                const brand = getBrandDetails(selectedCategory, entry.url);
+                const IconComponent = brand.icon;
+                const entryFaviconKey = `entry_${entry.id}`;
+                const isEntryFaviconWorking = domain && !faviconLoadError[entryFaviconKey];
+
                 return (
                   <motion.div
                     layout
@@ -304,14 +488,23 @@ export default function VaultView() {
                       isExpanded ? 'border-violet-500/30 bg-violet-950/5' : 'border-white/5 bg-white/2'
                     }`}
                   >
-                    {/* Header Row */}
+                    {/* Header bar click */}
                     <div 
                       onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
                       className="p-4 flex items-center justify-between cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600/30 to-pink-500/30 border border-white/10 flex items-center justify-center shrink-0">
-                          <Key size={16} className="text-violet-300" />
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${brand.gradient} border border-white/10 flex items-center justify-center shrink-0`}>
+                          {isEntryFaviconWorking ? (
+                            <img
+                              src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+                              alt={entry.siteName}
+                              onError={() => setFaviconLoadError(prev => ({ ...prev, [entryFaviconKey]: true }))}
+                              className="w-5 h-5 rounded object-contain"
+                            />
+                          ) : (
+                            <IconComponent size={16} className={brand.iconColor} />
+                          )}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-white/95">{entry.siteName}</p>
@@ -326,14 +519,13 @@ export default function VaultView() {
                       </motion.div>
                     </div>
 
-                    {/* Expandable Details Area */}
+                    {/* Content Detail Area */}
                     {isExpanded && (
                       <div className="px-4 pb-4 pt-1 border-t border-white/5 flex flex-col gap-3.5 text-xs text-white/70">
-                        {/* URL Row */}
                         {entry.url && (
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-[9px] text-white/30 uppercase tracking-wide">Website / App Link</p>
+                              <p className="text-[9px] text-white/30 uppercase tracking-wide">Website URL</p>
                               <a 
                                 href={entry.url.startsWith('http') ? entry.url : `https://${entry.url}`} 
                                 target="_blank" 
@@ -353,10 +545,9 @@ export default function VaultView() {
                           </div>
                         )}
 
-                        {/* Username Copy Row */}
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-[9px] text-white/30 uppercase tracking-wide">Username / Email</p>
+                            <p className="text-[9px] text-white/30 uppercase tracking-wide">Username or Email</p>
                             <p className="text-white font-medium mt-0.5 select-all">{entry.username}</p>
                           </div>
                           <button
@@ -367,7 +558,6 @@ export default function VaultView() {
                           </button>
                         </div>
 
-                        {/* Password Decrypt Row */}
                         <div className="flex items-center justify-between">
                           <div className="flex-1 mr-2">
                             <p className="text-[9px] text-white/30 uppercase tracking-wide">Secure Password</p>
@@ -379,7 +569,7 @@ export default function VaultView() {
                             <button
                               onClick={() => handleRevealPassword(entry.id, entry.encryptedPassword, entry.passwordIv)}
                               className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-violet-400"
-                              title={decryptedPass ? "Hide Password" : "Reveal Password"}
+                              title={decryptedPass ? "Hide" : "Reveal"}
                             >
                               {decryptedPass ? <EyeOff size={11} /> : <Eye size={11} />}
                             </button>
@@ -401,15 +591,13 @@ export default function VaultView() {
                           </div>
                         </div>
 
-                        {/* Notes Row */}
                         {entry.notes && (
                           <div className="bg-white/3 border border-white/5 rounded-xl p-3">
-                            <p className="text-[9px] text-white/30 uppercase tracking-wide mb-1">Vault Entry Notes</p>
+                            <p className="text-[9px] text-white/30 uppercase tracking-wide mb-1">Notes</p>
                             <p className="text-[11px] text-white/70 leading-relaxed whitespace-pre-wrap">{entry.notes}</p>
                           </div>
                         )}
 
-                        {/* Delete Credential button */}
                         <div className="flex justify-end border-t border-white/5 pt-3 mt-1">
                           <button
                             onClick={() => {
@@ -428,11 +616,11 @@ export default function VaultView() {
                     )}
                   </motion.div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )
         ) : (
-          /* SECURE NOTES TAB LIST */
+          /* SECURE NOTES GRID VIEW */
           <div className="grid grid-cols-2 gap-3">
             {filteredNotes.length === 0 ? (
               <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
@@ -462,7 +650,7 @@ export default function VaultView() {
         )}
       </div>
 
-      {/* Floating Add Trigger Button */}
+      {/* Floating Add trigger */}
       <div className="absolute bottom-6 right-6 z-20">
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -474,7 +662,7 @@ export default function VaultView() {
         </motion.button>
       </div>
 
-      {/* TOAST SYSTEM ALERTS */}
+      {/* Toasts system alerts */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
@@ -521,6 +709,68 @@ export default function VaultView() {
               </div>
 
               <form onSubmit={handleSaveEntry} className="flex flex-col gap-4 text-xs">
+                
+                {/* Category Type Picker */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Credential Category</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCategoryType('select')}
+                      className={`flex-1 py-2 border rounded-xl font-semibold text-[10px] transition-colors ${
+                        categoryType === 'select' 
+                          ? 'bg-violet-600/10 border-violet-500/40 text-violet-300' 
+                          : 'bg-white/2 border-white/5 text-white/60 hover:text-white'
+                      }`}
+                    >
+                      Select Brand / Group
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryType('custom')}
+                      className={`flex-1 py-2 border rounded-xl font-semibold text-[10px] transition-colors ${
+                        categoryType === 'custom' 
+                          ? 'bg-violet-600/10 border-violet-500/40 text-violet-300' 
+                          : 'bg-white/2 border-white/5 text-white/60 hover:text-white'
+                      }`}
+                    >
+                      + Custom Category
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selected Category input fields */}
+                {categoryType === 'select' ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Select Brand Category</label>
+                    <select
+                      value={selectedCategoryName}
+                      onChange={e => setSelectedCategoryName(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40"
+                    >
+                      <option value="Gmail">Gmail / Google</option>
+                      <option value="Netflix">Netflix</option>
+                      <option value="Social Media">Social Media (FB, Insta, Twitter)</option>
+                      <option value="Finance">Finance & Banking</option>
+                      <option value="Work">Work / Corporate Portal</option>
+                      <option value="Shopping">Shopping & Amazon</option>
+                      <option value="Other">Other Category</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Custom Category Name *</label>
+                    <input
+                      required={categoryType === 'custom'}
+                      type="text"
+                      value={customCategoryName}
+                      onChange={e => setCustomCategoryName(e.target.value)}
+                      placeholder="e.g. GitHub, PlayStation, Office"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40"
+                    />
+                  </div>
+                )}
+
                 {/* Site Name */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Site or App Name *</label>
@@ -529,7 +779,7 @@ export default function VaultView() {
                     type="text"
                     value={siteName}
                     onChange={e => setSiteName(e.target.value)}
-                    placeholder="e.g. Google, Netflix, Work Portal"
+                    placeholder="e.g. Personal Gmail, Family Netflix, Work Account"
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40"
                   />
                 </div>
@@ -577,7 +827,7 @@ export default function VaultView() {
                     type="text"
                     value={url}
                     onChange={e => setUrl(e.target.value)}
-                    placeholder="e.g. https://netflix.com"
+                    placeholder="e.g. netflix.com"
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40"
                   />
                 </div>

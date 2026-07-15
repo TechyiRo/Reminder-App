@@ -22,6 +22,7 @@ export interface VaultEntry {
   passwordIv: string;        // Base64 IV
   url: string;
   notes: string;
+  category?: string;         // Credential category (e.g. Gmail, Netflix, Work)
   createdAt: number;
   updatedAt: number;
 }
