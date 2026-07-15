@@ -641,7 +641,11 @@ export default function VaultView() {
         layout
         key={note.id}
         whileHover={{ scale: 1.02 }}
-        className="glass-panel p-4 rounded-2xl border border-white/8 bg-[#181728]/45 relative overflow-hidden flex flex-col gap-2 shadow-md group animate-fade-in"
+        className="glass-panel p-4 rounded-2xl border relative overflow-hidden flex flex-col gap-2 shadow-md group animate-fade-in"
+        style={{ 
+          background: `linear-gradient(135deg, ${(note.colorLabel || '#ff9f0a')}12, rgba(24, 23, 40, 0.5))`, 
+          borderColor: `${(note.colorLabel || '#ff9f0a')}33` 
+        }}
       >
         {/* Color accent label line */}
         <div className="absolute top-0 left-0 w-1.5 h-full" style={{ backgroundColor: note.colorLabel || '#ff9f0a' }} />
@@ -649,7 +653,10 @@ export default function VaultView() {
         {/* Card Header title info */}
         <div className="flex justify-between items-start pl-2">
           <div className="flex-1" onClick={() => openEditNote(note)}>
-            <h3 className="text-xs font-bold text-white leading-snug line-clamp-1 cursor-pointer hover:text-[#ff9f0a] transition-colors flex items-center gap-1.5">
+            <h3 
+              className="text-xs font-bold leading-snug line-clamp-1 cursor-pointer hover:opacity-85 transition-opacity flex items-center gap-1.5"
+              style={{ color: note.colorLabel || '#ffffff' }}
+            >
               {note.isLocked && <LockKeyhole size={11} className="text-amber-500 shrink-0" />}
               {note.title}
             </h3>
