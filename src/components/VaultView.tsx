@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Shield, Lock, KeyRound, FileText, Search, Plus, Eye, EyeOff, 
-  Copy, Trash2, ExternalLink, X, RefreshCw, Key, ChevronDown, CheckSquare, Edit3,
-  Mail, Play, Globe, Briefcase, CreditCard, ShoppingBag, ArrowLeft, Folder
+  Copy, Trash2, ExternalLink, X, RefreshCw, Key, ChevronDown,
+  Mail, Play, Globe, Briefcase, CreditCard, ShoppingBag, ArrowLeft, Folder,
+  Music, MessageSquare, Smartphone, Tv,
+  Bold, Italic, List, ListTodo, Type, Image, FileEdit
 } from 'lucide-react';
 import { useReminderStore } from '../store/reminderStore';
 import { encryptPassword, decryptPassword, generateStrongPassword } from '../utils/crypto';
@@ -39,23 +41,68 @@ const getBrandDetails = (categoryName: string, url?: string) => {
   // 2. Netflix
   if (name.includes('netflix') || domain.includes('netflix')) {
     return {
-      icon: Play,
+      icon: Tv,
       iconColor: 'text-red-600',
       gradient: 'from-red-600/20 to-red-800/10',
       bgGlow: 'shadow-red-600/10'
     };
   }
-  // 3. Social Media
-  if (name.includes('social') || name.includes('facebook') || name.includes('instagram') || name.includes('twitter') || name.includes('linkedin') || domain.includes('facebook') || domain.includes('instagram') || domain.includes('twitter') || domain.includes('linkedin')) {
+  // 3. Facebook
+  if (name.includes('facebook') || domain.includes('facebook')) {
     return {
       icon: Globe,
-      iconColor: 'text-blue-400',
-      gradient: 'from-blue-500/20 to-cyan-500/10',
+      iconColor: 'text-blue-500',
+      gradient: 'from-blue-600/20 to-indigo-600/10',
       bgGlow: 'shadow-blue-500/10'
     };
   }
-  // 4. Finance
-  if (name.includes('finance') || name.includes('bank') || name.includes('card') || name.includes('crypto') || domain.includes('paypal') || domain.includes('bank')) {
+  // 4. Instagram
+  if (name.includes('instagram') || domain.includes('instagram')) {
+    return {
+      icon: Globe,
+      iconColor: 'text-pink-500',
+      gradient: 'from-pink-500/20 to-rose-500/10',
+      bgGlow: 'shadow-pink-500/10'
+    };
+  }
+  // 5. YouTube
+  if (name.includes('youtube') || domain.includes('youtube')) {
+    return {
+      icon: Play,
+      iconColor: 'text-red-500',
+      gradient: 'from-red-500/20 to-rose-700/10',
+      bgGlow: 'shadow-red-500/10'
+    };
+  }
+  // 6. GitHub
+  if (name.includes('github') || domain.includes('github')) {
+    return {
+      icon: Folder,
+      iconColor: 'text-zinc-300',
+      gradient: 'from-zinc-600/20 to-zinc-800/10',
+      bgGlow: 'shadow-zinc-500/10'
+    };
+  }
+  // 7. Spotify
+  if (name.includes('spotify') || domain.includes('spotify')) {
+    return {
+      icon: Music,
+      iconColor: 'text-emerald-400',
+      gradient: 'from-green-500/20 to-emerald-600/10',
+      bgGlow: 'shadow-emerald-500/10'
+    };
+  }
+  // 8. Apple
+  if (name.includes('apple') || name.includes('icloud') || domain.includes('apple') || domain.includes('icloud')) {
+    return {
+      icon: Smartphone,
+      iconColor: 'text-slate-300',
+      gradient: 'from-zinc-400/20 to-slate-500/10',
+      bgGlow: 'shadow-slate-400/10'
+    };
+  }
+  // 9. Finance & Cards
+  if (name.includes('finance') || name.includes('bank') || name.includes('card') || name.includes('crypto') || domain.includes('paypal') || domain.includes('stripe')) {
     return {
       icon: CreditCard,
       iconColor: 'text-amber-400',
@@ -63,7 +110,34 @@ const getBrandDetails = (categoryName: string, url?: string) => {
       bgGlow: 'shadow-amber-500/10'
     };
   }
-  // 5. Work
+  // 10. Social Media General
+  if (name.includes('social') || name.includes('twitter') || name.includes('linkedin') || domain.includes('twitter') || domain.includes('linkedin')) {
+    return {
+      icon: Globe,
+      iconColor: 'text-sky-400',
+      gradient: 'from-sky-500/20 to-blue-500/10',
+      bgGlow: 'shadow-sky-500/10'
+    };
+  }
+  // 11. Shopping General
+  if (name.includes('shopping') || name.includes('amazon') || name.includes('ebay') || domain.includes('amazon') || domain.includes('ebay')) {
+    return {
+      icon: ShoppingBag,
+      iconColor: 'text-orange-400',
+      gradient: 'from-amber-600/20 to-orange-500/10',
+      bgGlow: 'shadow-orange-500/10'
+    };
+  }
+  // 12. Chat / Messaging
+  if (name.includes('chat') || name.includes('whatsapp') || name.includes('discord') || name.includes('slack') || domain.includes('whatsapp') || domain.includes('discord')) {
+    return {
+      icon: MessageSquare,
+      iconColor: 'text-emerald-400',
+      gradient: 'from-emerald-500/20 to-teal-500/10',
+      bgGlow: 'shadow-emerald-500/10'
+    };
+  }
+  // 13. Work / Business
   if (name.includes('work') || name.includes('office') || name.includes('job') || name.includes('corporate')) {
     return {
       icon: Briefcase,
@@ -72,16 +146,7 @@ const getBrandDetails = (categoryName: string, url?: string) => {
       bgGlow: 'shadow-indigo-500/10'
     };
   }
-  // 6. Shopping
-  if (name.includes('shopping') || name.includes('amazon') || name.includes('ebay') || domain.includes('amazon') || domain.includes('ebay')) {
-    return {
-      icon: ShoppingBag,
-      iconColor: 'text-pink-400',
-      gradient: 'from-pink-500/20 to-rose-500/10',
-      bgGlow: 'shadow-pink-500/10'
-    };
-  }
-  // 7. Fallback Default Other
+  // 14. Fallback Default Other
   return {
     icon: Key,
     iconColor: 'text-violet-300',
@@ -252,8 +317,8 @@ export default function VaultView() {
 
   const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noteTitle || !noteBody) {
-      showToast('Note requires title and content');
+    if (!noteTitle.trim()) {
+      showToast('Note requires a title');
       return;
     }
 
@@ -270,7 +335,7 @@ export default function VaultView() {
 
   const handleUpdateNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedNoteId || !noteTitle || !noteBody) return;
+    if (!selectedNoteId || !noteTitle.trim()) return;
 
     await updateSecureNote(selectedNoteId, noteTitle, noteBody);
     showToast('Secure note updated');
@@ -318,13 +383,13 @@ export default function VaultView() {
   );
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0915] text-white relative">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#0d0c1e] text-white relative">
       {/* Glow Effects */}
-      <div className="absolute top-0 left-0 w-full h-52 bg-gradient-to-b from-purple-900/10 via-[#0a0915] to-[#0a0915] pointer-events-none z-0" />
+      <div className="absolute top-0 left-0 w-full h-52 bg-gradient-to-b from-purple-950/15 via-[#0d0c1e] to-[#0d0c1e] pointer-events-none z-0" />
 
       {/* Header section */}
       <div className="p-5 pb-3 pt-8 flex items-center justify-between z-10 shrink-0 select-none">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center">
             <Shield size={16} className="text-violet-400" />
           </div>
@@ -430,10 +495,10 @@ export default function VaultView() {
                       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${brand.gradient} border border-white/10 flex items-center justify-center shrink-0 shadow-md ${brand.bgGlow}`}>
                         {isFaviconWorking ? (
                           <img
-                            src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+                            src={`https://www.google.com/s2/favicons?sz=128&domain=${domain}`}
                             alt={name}
                             onError={() => setFaviconLoadError(prev => ({ ...prev, [name]: true }))}
-                            className="w-5 h-5 rounded object-contain"
+                            className="w-6 h-6 rounded object-contain"
                           />
                         ) : (
                           <IconComponent size={18} className={brand.iconColor} />
@@ -497,7 +562,7 @@ export default function VaultView() {
                         <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${brand.gradient} border border-white/10 flex items-center justify-center shrink-0`}>
                           {isEntryFaviconWorking ? (
                             <img
-                              src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+                              src={`https://www.google.com/s2/favicons?sz=128&domain=${domain}`}
                               alt={entry.siteName}
                               onError={() => setFaviconLoadError(prev => ({ ...prev, [entryFaviconKey]: true }))}
                               className="w-5 h-5 rounded object-contain"
@@ -620,45 +685,68 @@ export default function VaultView() {
             </div>
           )
         ) : (
-          /* SECURE NOTES GRID VIEW */
-          <div className="grid grid-cols-2 gap-3">
-            {filteredNotes.length === 0 ? (
-              <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center">
-                <FileText size={32} className="text-white/20 mb-3" />
-                <p className="text-xs text-white/50">No secure notes found</p>
-                <p className="text-[10px] text-white/30 mt-1">Tap the plus button below to write one</p>
+          /* ─── SECURE NOTES SECTION (Apple Notes Design Style) ─────────────────── */
+          <div className="flex flex-col">
+            {/* Apple Notes Styled Folder Panel Container */}
+            <div className="bg-[#1c1c1e] rounded-2xl overflow-hidden border border-white/5 shadow-xl">
+              <div className="px-4 py-3 bg-[#2c2c2e]/40 border-b border-white/5 flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-white/40 tracking-wider">Quick Notes</span>
+                <span className="text-[10px] font-bold text-[#ff9f0a]">{filteredNotes.length} Notes</span>
               </div>
-            ) : (
-              filteredNotes.map(note => (
-                <div
-                  key={note.id}
-                  onClick={() => openEditNote(note)}
-                  className="glass-panel border border-white/5 bg-white/2 hover:bg-white/5 rounded-2xl p-4 flex flex-col justify-between h-36 cursor-pointer text-left active:scale-[0.98] transition-all relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-violet-600/5 to-transparent pointer-events-none" />
-                  <div>
-                    <h3 className="text-xs font-bold text-white/95 line-clamp-1 mb-1.5">{note.title}</h3>
-                    <p className="text-[10px] text-white/40 line-clamp-4 leading-normal">{note.body}</p>
+              
+              <div className="divide-y divide-white/5">
+                {filteredNotes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                    <FileEdit size={28} className="text-white/20 mb-3" />
+                    <p className="text-xs text-white/50 font-semibold">No Notes</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">Write a new Apple Note using the amber pen button</p>
                   </div>
-                  <span className="text-[8px] text-white/30 tracking-wider shrink-0 mt-3 font-semibold uppercase">
-                    {new Date(note.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </span>
-                </div>
-              ))
-            )}
+                ) : (
+                  filteredNotes.map((note) => {
+                    const cleanDate = new Date(note.updatedAt).toLocaleDateString(undefined, {
+                      month: 'numeric',
+                      day: 'numeric',
+                      year: '2-digit'
+                    });
+                    const snippet = note.body ? note.body.slice(0, 60) : 'No additional text';
+
+                    return (
+                      <motion.button
+                        whileTap={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                        key={note.id}
+                        onClick={() => openEditNote(note)}
+                        className="w-full p-4 text-left flex flex-col gap-1 transition-colors outline-none"
+                      >
+                        <h3 className="text-xs font-bold text-white leading-tight line-clamp-1">
+                          {note.title}
+                        </h3>
+                        <div className="flex items-baseline gap-2 text-[10px] leading-relaxed">
+                          <span className="text-white/40 font-semibold shrink-0">{cleanDate}</span>
+                          <span className="text-white/60 line-clamp-1">{snippet}</span>
+                        </div>
+                      </motion.button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Floating Add trigger */}
+      {/* Floating Add trigger (Amber accent for Notes tab to match Apple Notes style!) */}
       <div className="absolute bottom-6 right-6 z-20">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => activeTab === 'credentials' ? setIsAddEntryOpen(true) : setIsAddNoteOpen(true)}
-          className="w-12 h-12 rounded-full bg-gradient-to-r from-violet-600 to-pink-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/20 border border-white/20 hover:from-violet-500 hover:to-pink-500 outline-none"
+          className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg border outline-none transition-all duration-300 ${
+            activeTab === 'notes'
+              ? 'bg-[#ff9f0a] border-amber-400 text-black shadow-amber-500/25 hover:bg-[#e08b00]'
+              : 'bg-gradient-to-r from-violet-600 to-pink-600 border-white/20 text-white shadow-violet-500/20 hover:from-violet-500 hover:to-pink-500'
+          }`}
         >
-          <Plus size={24} />
+          {activeTab === 'notes' ? <FileEdit size={20} /> : <Plus size={24} />}
         </motion.button>
       </div>
 
@@ -750,9 +838,14 @@ export default function VaultView() {
                     >
                       <option value="Gmail">Gmail / Google</option>
                       <option value="Netflix">Netflix</option>
-                      <option value="Social Media">Social Media (FB, Insta, Twitter)</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="YouTube">YouTube</option>
+                      <option value="Spotify">Spotify</option>
+                      <option value="GitHub">GitHub</option>
+                      <option value="Apple">Apple / iCloud</option>
                       <option value="Finance">Finance & Banking</option>
-                      <option value="Work">Work / Corporate Portal</option>
+                      <option value="Social Media">Other Social Media</option>
                       <option value="Shopping">Shopping & Amazon</option>
                       <option value="Other">Other Category</option>
                     </select>
@@ -765,7 +858,7 @@ export default function VaultView() {
                       type="text"
                       value={customCategoryName}
                       onChange={e => setCustomCategoryName(e.target.value)}
-                      placeholder="e.g. GitHub, PlayStation, Office"
+                      placeholder="e.g. PlayStation, WhatsApp, LinkedIn"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40"
                     />
                   </div>
@@ -858,7 +951,7 @@ export default function VaultView() {
         )}
       </AnimatePresence>
 
-      {/* ─── ADD SECURE NOTE MODAL SHEET ───────────────────────────────────────── */}
+      {/* ─── ADD APPLE SECURE NOTE MODAL SHEET ─────────────────────────────────── */}
       <AnimatePresence>
         {isAddNoteOpen && (
           <motion.div
@@ -873,54 +966,58 @@ export default function VaultView() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="relative w-full max-w-sm glass-panel-dark rounded-t-3xl border-t border-white/10 p-5 pb-8 shadow-2xl flex flex-col"
+              className="relative w-full max-w-sm bg-[#1c1c1e] rounded-t-3xl border-t border-white/15 p-5 pb-8 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <FileText size={15} className="text-violet-400" />
-                  <h3 className="text-sm font-bold text-white">Add Secure Note</h3>
-                </div>
+              {/* Apple Note Style Header */}
+              <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+                <span className="text-xs font-bold text-white/50">Folders / Quick Note</span>
                 <button
-                  onClick={() => setIsAddNoteOpen(false)}
-                  className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50"
+                  onClick={handleSaveNote}
+                  className="text-xs font-bold text-[#ff9f0a] hover:text-amber-400 transition-colors"
                 >
-                  <X size={14} />
+                  Done
                 </button>
               </div>
 
               <form onSubmit={handleSaveNote} className="flex flex-col gap-4 text-xs">
+                {/* Note Title (Apple Notes style: Borderless, Bold, Large) */}
                 <input
                   required
                   type="text"
                   value={noteTitle}
                   onChange={e => setNoteTitle(e.target.value)}
-                  placeholder="Note Title"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white font-bold outline-none focus:border-violet-500/40"
+                  placeholder="New Note Title"
+                  className="w-full bg-transparent text-white font-bold text-base placeholder-white/30 outline-none border-none py-1"
                 />
 
+                {/* Note Content (Apple Notes style: Borderless, spacious) */}
                 <textarea
-                  required
                   value={noteBody}
                   onChange={e => setNoteBody(e.target.value)}
-                  placeholder="Write note contents here..."
-                  rows={6}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40 resize-none leading-relaxed"
+                  placeholder="Start writing note details..."
+                  rows={10}
+                  className="w-full bg-transparent text-white/80 placeholder-white/20 outline-none border-none resize-none leading-relaxed text-xs py-1 min-h-[150px]"
                 />
 
-                <button
-                  type="submit"
-                  className="h-12 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold text-sm shadow-lg shadow-violet-900/30 flex items-center justify-center gap-1.5"
-                >
-                  <CheckSquare size={14} />
-                  Save Note
-                </button>
+                {/* Apple Notes styled Mock formatting toolbar at bottom of sheet */}
+                <div className="border-t border-white/5 pt-3 mt-2 flex items-center justify-between text-white/40 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Type size={15} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Bold size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Italic size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><List size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><ListTodo size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Image size={14} /></button>
+                  </div>
+                  <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Apple Notes System</span>
+                </div>
               </form>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ─── EDIT SECURE NOTE MODAL SHEET ──────────────────────────────────────── */}
+      {/* ─── EDIT/VIEW APPLE SECURE NOTE MODAL SHEET ───────────────────────────── */}
       <AnimatePresence>
         {isEditNoteOpen && (
           <motion.div
@@ -935,63 +1032,62 @@ export default function VaultView() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="relative w-full max-w-sm glass-panel-dark rounded-t-3xl border-t border-white/10 p-5 pb-8 shadow-2xl flex flex-col"
+              className="relative w-full max-w-sm bg-[#1c1c1e] rounded-t-3xl border-t border-white/15 p-5 pb-8 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Edit3 size={15} className="text-violet-400" />
-                  <h3 className="text-sm font-bold text-white">Edit Secure Note</h3>
-                </div>
+              {/* Apple Note Style Header */}
+              <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
                 <button
-                  onClick={() => setIsEditNoteOpen(false)}
-                  className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50"
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Delete this secure note permanently?')) {
+                      deleteSecureNote(selectedNoteId!);
+                      setIsEditNoteOpen(false);
+                      showToast('Secure note deleted');
+                    }
+                  }}
+                  className="text-xs font-bold text-red-500/80 hover:text-red-400 transition-colors"
                 >
-                  <X size={14} />
+                  Delete
+                </button>
+                <button
+                  onClick={handleUpdateNote}
+                  className="text-xs font-bold text-[#ff9f0a] hover:text-amber-400 transition-colors"
+                >
+                  Done
                 </button>
               </div>
 
               <form onSubmit={handleUpdateNote} className="flex flex-col gap-4 text-xs">
+                {/* Note Title */}
                 <input
                   required
                   type="text"
                   value={noteTitle}
                   onChange={e => setNoteTitle(e.target.value)}
                   placeholder="Note Title"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white font-bold outline-none focus:border-violet-500/40"
+                  className="w-full bg-transparent text-white font-bold text-base placeholder-white/30 outline-none border-none py-1"
                 />
 
+                {/* Note Content */}
                 <textarea
-                  required
                   value={noteBody}
                   onChange={e => setNoteBody(e.target.value)}
-                  placeholder="Write note contents here..."
-                  rows={6}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-violet-500/40 resize-none leading-relaxed"
+                  placeholder="Write note contents..."
+                  rows={10}
+                  className="w-full bg-transparent text-white/80 placeholder-white/20 outline-none border-none resize-none leading-relaxed text-xs py-1 min-h-[150px]"
                 />
 
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('Delete this secure note permanently?')) {
-                        deleteSecureNote(selectedNoteId!);
-                        setIsEditNoteOpen(false);
-                        showToast('Secure note deleted');
-                      }
-                    }}
-                    className="flex-1 h-12 rounded-2xl border border-red-500/20 bg-red-950/20 text-red-400 font-bold text-sm flex items-center justify-center gap-1.5"
-                  >
-                    <Trash2 size={14} />
-                    Delete
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="flex-2 flex-1 h-12 rounded-2xl bg-gradient-to-r from-violet-600 to-pink-600 text-white font-bold text-sm shadow-lg shadow-violet-900/30 flex items-center justify-center gap-1.5"
-                  >
-                    <CheckSquare size={14} />
-                    Save Note
-                  </button>
+                {/* Apple Notes styled Mock formatting toolbar at bottom */}
+                <div className="border-t border-white/5 pt-3 mt-2 flex items-center justify-between text-white/40 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Type size={15} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Bold size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Italic size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><List size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><ListTodo size={14} /></button>
+                    <button type="button" className="p-1 hover:text-[#ff9f0a] transition-colors"><Image size={14} /></button>
+                  </div>
+                  <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest text-right">Apple Notes System</span>
                 </div>
               </form>
             </motion.div>

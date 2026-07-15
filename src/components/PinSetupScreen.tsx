@@ -85,19 +85,26 @@ export default function PinSetupScreen({ onSetupSuccess }: PinSetupScreenProps) 
 
   const enableBiometrics = async () => {
     try {
-      // Store credentials securely in keystore
+      const availability = await NativeBiometric.isAvailable();
+      if (!availability.isAvailable) {
+        alert("Biometric hardware (fingerprint/face recognition) is not supported or enrolled on this device.");
+        return;
+      }
+
+      // Store credentials securely in keystore without accessControl parameter
+      // (This saves silently, preventing any activity lifecycle casting crashes on save)
       await NativeBiometric.setCredentials({
         username: 'vault',
         password: pin,
         server: 'SecureVault',
-        accessControl: AccessControl.BIOMETRY_ANY
+        accessControl: AccessControl.NONE
       });
       // Save setting
       updateSettings({ vaultBiometricEnabled: true });
-    } catch (err) {
-      console.error('[Biometrics] Error storing credentials:', err);
-    } finally {
+      alert("Biometric unlock enabled successfully for SecureVault!");
       onSetupSuccess();
+    } catch (err) {
+      alert("Failed to enroll biometrics. Please ensure fingerprint/face unlock is configured on your device.");
     }
   };
 

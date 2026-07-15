@@ -60,8 +60,17 @@ export default function LockScreen({ onUnlockSuccess }: LockScreenProps) {
   const triggerBiometricAuth = async () => {
     if (lockoutUntil > Date.now()) return;
     try {
-      // Retrieve secure credentials, automatically triggering the native biometric prompt bound to Keystore keys
-      const credentials = await NativeBiometric.getSecureCredentials({
+      // 1. Trigger the native OS biometric verification prompt
+      await NativeBiometric.verifyIdentity({
+        reason: 'Authenticate to unlock your SecureVault',
+        title: 'SecureVault Authentication',
+        subtitle: 'Verify identity to continue',
+        description: 'Verify your fingerprint or face to retrieve your vault keys.',
+        negativeButtonText: 'Cancel'
+      });
+
+      // 2. Retrieve secure credentials silently after successful authentication
+      const credentials = await NativeBiometric.getCredentials({
         server: 'SecureVault'
       });
 
@@ -203,19 +212,27 @@ export default function LockScreen({ onUnlockSuccess }: LockScreenProps) {
             </motion.button>
           ))}
 
-          {/* Biometrics Activation / Dummy spacer */}
-          {biometricSupported && settings.vaultBiometricEnabled ? (
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={triggerBiometricAuth}
-              disabled={cooldownSeconds > 0}
-              className="h-14 rounded-xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center outline-none"
-            >
-              <Fingerprint size={22} />
-            </motion.button>
-          ) : (
-            <div className="h-14" />
-          )}
+          {/* Biometrics Activation / Info prompt */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              if (!biometricSupported) {
+                alert("Biometric hardware (fingerprint/face recognition) is not supported or enrolled on this device.");
+              } else if (!settings.vaultBiometricEnabled) {
+                alert("Biometric unlock is currently disabled for Vault. Please enable it in Settings -> Security & Vault.");
+              } else {
+                triggerBiometricAuth();
+              }
+            }}
+            disabled={cooldownSeconds > 0}
+            className={`h-14 rounded-xl flex items-center justify-center outline-none transition-all duration-300 ${
+              biometricSupported && settings.vaultBiometricEnabled
+                ? 'bg-violet-600/10 border border-violet-500/20 text-violet-400'
+                : 'bg-white/5 border border-white/8 text-white/20 hover:text-white/40'
+            }`}
+          >
+            <Fingerprint size={22} />
+          </motion.button>
 
           <motion.button
             whileTap={{ scale: 0.9 }}

@@ -513,14 +513,14 @@ export function SettingsView() {
                           const salt = settings.vaultPinSalt || '';
                           const testHash = await hashPin(currentPin, salt);
                           if (testHash === correctHash) {
-                            await NativeBiometric.setCredentials({
-                              username: 'vault',
-                              password: currentPin,
-                              server: 'SecureVault',
-                              accessControl: AccessControl.BIOMETRY_ANY
-                            });
-                            updateSettings({ vaultBiometricEnabled: true });
-                            alert("Biometric enrollment successful!");
+                             await NativeBiometric.setCredentials({
+                               username: 'vault',
+                               password: currentPin,
+                               server: 'SecureVault',
+                               accessControl: AccessControl.NONE
+                             });
+                             updateSettings({ vaultBiometricEnabled: true });
+                             alert("Biometric unlock enabled successfully for SecureVault!");
                           } else {
                             alert("Incorrect PIN. Enrollment cancelled.");
                           }
