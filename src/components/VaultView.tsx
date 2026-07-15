@@ -11,8 +11,7 @@ import { useReminderStore } from '../store/reminderStore';
 import { encryptPassword, decryptPassword, generateStrongPassword } from '../utils/crypto';
 import LockScreen from './LockScreen';
 import PinSetupScreen from './PinSetupScreen';
-import type { VaultEntry } from '../store/db';
-import type { SecureNote, Attachment } from '../store/db';
+import type { VaultEntry, SecureNote, Attachment, NoteStep } from '../store/db';
 import { hashPin } from '../utils/crypto';
 
 // Helper to extract domain from URL for dynamic favicon loading
@@ -171,6 +170,12 @@ export default function VaultView() {
   // Favicon error handler helper
   const [faviconLoadError, setFaviconLoadError] = useState<Record<string, boolean>>({});
 
+  // Step/Process builder states
+  const [noteSteps, setNoteSteps] = useState<NoteStep[]>([]);
+  const [newStepTitle, setNewStepTitle] = useState('');
+  const [newStepText, setNewStepText] = useState('');
+  const [newStepColor, setNewStepColor] = useState('#ff9f0a');
+
   useEffect(() => {
     if (toastMessage) {
       const t = setTimeout(() => setToastMessage(''), 2500);
@@ -324,7 +329,8 @@ export default function VaultView() {
       isTrash: false,
       colorLabel: noteColorLabel,
       isLocked: false,
-      attachments: noteAttachments
+      attachments: noteAttachments,
+      steps: noteSteps
     });
 
     showToast('Note created successfully!');
@@ -346,7 +352,8 @@ export default function VaultView() {
       description: noteDesc,
       tags: tagsArray,
       colorLabel: noteColorLabel,
-      attachments: noteAttachments
+      attachments: noteAttachments,
+      steps: noteSteps
     });
 
     showToast('Note updated successfully!');
@@ -362,6 +369,9 @@ export default function VaultView() {
     setNoteTagsText('');
     setNoteColorLabel('#3b82f6');
     setNoteAttachments([]);
+    setNoteSteps([]);
+    setNewStepTitle('');
+    setNewStepText('');
     setNoteCustomCategory('');
     setNoteCategoryType('select');
   };
@@ -383,6 +393,9 @@ export default function VaultView() {
     setNoteTagsText(note.tags ? note.tags.join(', ') : '');
     setNoteColorLabel(note.colorLabel || '#3b82f6');
     setNoteAttachments(note.attachments || []);
+    setNoteSteps(note.steps || []);
+    setNewStepTitle('');
+    setNewStepText('');
     
     // Check if category is standard
     const isStandard = NOTE_CATEGORIES.some(c => c.name === note.category);
@@ -394,6 +407,14 @@ export default function VaultView() {
       setNoteCategoryType('custom');
     }
     setIsEditNoteOpen(true);
+  };
+
+  const handleDeleteFolderNotes = async (categoryName: string) => {
+    const notesInCat = secureNotes.filter(n => n.category === categoryName && !n.isTrash);
+    for (const note of notesInCat) {
+      await updateSecureNote(note.id, { isTrash: true });
+    }
+    showToast(`Folder "${categoryName.replace(/^[^\s]+\s+/, '')}" deleted.`);
   };
 
   const handleUnlockNoteWithPin = async () => {
@@ -1192,15 +1213,30 @@ export default function VaultView() {
                       {/* Hover Reflection Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/2 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
                       
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start w-full">
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.gradient} border border-white/10 flex items-center justify-center shadow-inner`}>
                           <Icon size={20} className={cat.color} />
                         </div>
-                        {count > 0 && (
-                          <span className="text-[9px] bg-amber-500/10 border border-[#ff9f0a]/30 text-[#ff9f0a] px-2 py-0.5 rounded-full font-bold">
-                            {count}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {count > 0 && (
+                            <span className="text-[9px] bg-amber-500/10 border border-[#ff9f0a]/30 text-[#ff9f0a] px-2 py-0.5 rounded-full font-bold">
+                              {count}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete folder "${cat.name.replace(/^[^\s]+\s+/, '')}"? All active notes inside will be moved to Trash.`)) {
+                                handleDeleteFolderNotes(cat.name);
+                              }
+                            }}
+                            className="w-6 h-6 rounded-lg bg-red-500/15 hover:bg-red-500/30 border border-red-500/25 flex items-center justify-center text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete Folder"
+                          >
+                            <Trash size={10} />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="mt-3">
@@ -1224,15 +1260,30 @@ export default function VaultView() {
                       onClick={() => setSelectedNoteCategory(catName)}
                       className="glass-panel text-left p-4 rounded-2xl border border-white/8 hover:border-amber-500/20 transition-all flex flex-col justify-between h-36 relative overflow-hidden group shadow-lg"
                     >
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start w-full">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-white/10 flex items-center justify-center">
                           <Folder size={18} className="text-violet-400" />
                         </div>
-                        {count > 0 && (
-                          <span className="text-[9px] bg-amber-500/10 border border-[#ff9f0a]/30 text-[#ff9f0a] px-2 py-0.5 rounded-full font-bold">
-                            {count}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {count > 0 && (
+                            <span className="text-[9px] bg-amber-500/10 border border-[#ff9f0a]/30 text-[#ff9f0a] px-2 py-0.5 rounded-full font-bold">
+                              {count}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete custom folder "${catName}"? All active notes inside will be moved to Trash.`)) {
+                                handleDeleteFolderNotes(catName);
+                              }
+                            }}
+                            className="w-6 h-6 rounded-lg bg-red-500/15 hover:bg-red-500/30 border border-red-500/25 flex items-center justify-center text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete Folder"
+                          >
+                            <Trash size={10} />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="mt-3">
@@ -1405,6 +1456,49 @@ export default function VaultView() {
                   className="w-full bg-transparent text-white/50 placeholder-white/20 outline-none border-none pb-1"
                 />
 
+                {/* PROCESS FLOW WORKFLOW DIAGRAM */}
+                {noteSteps.length > 0 && (
+                  <div className="bg-[#131224]/50 border border-white/5 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-inner shrink-0 text-left">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/5 to-transparent rounded-full blur-xl pointer-events-none" />
+                    <span className="text-[9px] uppercase font-bold text-white/40 tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Interactive Workflow Diagram
+                    </span>
+                    
+                    {/* Diagram layout */}
+                    <div className="flex flex-col gap-4 relative pl-3 mt-1">
+                      {/* Connecting Line Track */}
+                      <div className="absolute top-3 bottom-3 left-[12px] w-0.5 bg-gradient-to-b from-[#ff9f0a]/30 via-violet-500/20 to-blue-500/10 pointer-events-none" />
+
+                      {noteSteps.map((step, idx) => (
+                        <div key={step.id} className="flex items-start gap-3.5 relative group">
+                          {/* Diagram Node Circle */}
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-black shrink-0 z-10 shadow-lg transition-transform group-hover:scale-110 duration-300"
+                            style={{ 
+                              backgroundColor: step.color, 
+                              boxShadow: `0 0 10px ${step.color}44` 
+                            }}
+                          >
+                            {idx + 1}
+                          </div>
+                          
+                          {/* Node Details Content */}
+                          <div className="flex-1 bg-white/2 border border-white/5 rounded-xl p-3 hover:border-white/10 transition-colors">
+                            <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: step.color }}>
+                              STEP {idx + 1}
+                            </span>
+                            <h4 className="text-[11px] font-bold text-white leading-tight mt-0.5">{step.title}</h4>
+                            {step.text && (
+                              <p className="text-[10px] text-white/60 leading-relaxed mt-1 whitespace-pre-wrap">{step.text}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Note Content */}
                 <textarea
                   value={noteBody}
@@ -1513,6 +1607,99 @@ export default function VaultView() {
                       </div>
                     </div>
                   )}
+
+                  {/* Process Steps Section */}
+                  <div className="border-t border-white/5 pt-3 flex flex-col gap-3 shrink-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] uppercase font-bold text-white/40 tracking-wider">Process Steps Workflow</span>
+                      <span className="text-[9px] text-[#ff9f0a] font-bold">({noteSteps.length} Steps)</span>
+                    </div>
+
+                    {/* Step entry inputs */}
+                    <div className="bg-white/3 border border-white/5 rounded-xl p-3 flex flex-col gap-2.5">
+                      <input
+                        type="text"
+                        value={newStepTitle}
+                        onChange={e => setNewStepTitle(e.target.value)}
+                        placeholder="Step Title (e.g. Rule Configuration)"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-white/30 outline-none focus:border-amber-500/40"
+                      />
+                      <textarea
+                        value={newStepText}
+                        onChange={e => setNewStepText(e.target.value)}
+                        placeholder="Step details and instructions..."
+                        rows={2}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-white/30 outline-none focus:border-amber-500/40 resize-none"
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-1.5">
+                          {['#ff9f0a', '#ef4444', '#3b82f6', '#10b981', '#a855f7'].map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setNewStepColor(c)}
+                              className={`w-3.5 h-3.5 rounded-full border ${newStepColor === c ? 'border-white scale-110' : 'border-transparent'}`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newStepTitle.trim()) {
+                              showToast('Step requires a title');
+                              return;
+                            }
+                            const newStep = {
+                              id: crypto.randomUUID(),
+                              title: newStepTitle,
+                              text: newStepText,
+                              color: newStepColor
+                            };
+                            setNoteSteps(prev => [...prev, newStep]);
+                            setNewStepTitle('');
+                            setNewStepText('');
+                            showToast('Step added to workflow');
+                          }}
+                          className="bg-amber-500/10 border border-[#ff9f0a]/30 text-[#ff9f0a] px-2.5 py-1 rounded-lg text-[9px] font-bold hover:bg-amber-500/20"
+                        >
+                          + Add Step
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Added steps workflow list */}
+                    {noteSteps.length > 0 && (
+                      <div className="flex flex-col gap-2 max-h-36 overflow-y-auto pr-1">
+                        {noteSteps.map((step, idx) => (
+                          <div 
+                            key={step.id} 
+                            className="bg-white/2 border border-white/5 rounded-xl p-2.5 flex items-start justify-between gap-2.5"
+                          >
+                            <div className="flex gap-2">
+                              <span 
+                                className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold text-black font-mono mt-0.5"
+                                style={{ backgroundColor: step.color }}
+                              >
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <h5 className="text-[11px] font-bold text-white leading-tight">{step.title}</h5>
+                                {step.text && <p className="text-[9px] text-white/50 mt-0.5 leading-relaxed">{step.text}</p>}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setNoteSteps(prev => prev.filter(s => s.id !== step.id))}
+                              className="text-red-400 hover:text-red-300 text-[10px] font-bold mt-0.5 shrink-0"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Apple Notes styled Mock formatting toolbar at bottom */}
                   <div className="border-t border-white/5 pt-3 mt-1 flex items-center justify-between text-white/40 shrink-0">
@@ -1640,6 +1827,49 @@ export default function VaultView() {
                   className="w-full bg-transparent text-white/50 placeholder-white/20 outline-none border-none pb-1"
                 />
 
+                {/* PROCESS FLOW WORKFLOW DIAGRAM */}
+                {noteSteps.length > 0 && (
+                  <div className="bg-[#131224]/50 border border-white/5 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-inner shrink-0 text-left">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/5 to-transparent rounded-full blur-xl pointer-events-none" />
+                    <span className="text-[9px] uppercase font-bold text-white/40 tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Interactive Workflow Diagram
+                    </span>
+                    
+                    {/* Diagram layout */}
+                    <div className="flex flex-col gap-4 relative pl-3 mt-1">
+                      {/* Connecting Line Track */}
+                      <div className="absolute top-3 bottom-3 left-[12px] w-0.5 bg-gradient-to-b from-[#ff9f0a]/30 via-violet-500/20 to-blue-500/10 pointer-events-none" />
+
+                      {noteSteps.map((step, idx) => (
+                        <div key={step.id} className="flex items-start gap-3.5 relative group">
+                          {/* Diagram Node Circle */}
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-black shrink-0 z-10 shadow-lg transition-transform group-hover:scale-110 duration-300"
+                            style={{ 
+                              backgroundColor: step.color, 
+                              boxShadow: `0 0 10px ${step.color}44` 
+                            }}
+                          >
+                            {idx + 1}
+                          </div>
+                          
+                          {/* Node Details Content */}
+                          <div className="flex-1 bg-white/2 border border-white/5 rounded-xl p-3 hover:border-white/10 transition-colors">
+                            <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: step.color }}>
+                              STEP {idx + 1}
+                            </span>
+                            <h4 className="text-[11px] font-bold text-white leading-tight mt-0.5">{step.title}</h4>
+                            {step.text && (
+                              <p className="text-[10px] text-white/60 leading-relaxed mt-1 whitespace-pre-wrap">{step.text}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Note Content */}
                 <textarea
                   value={noteBody}
@@ -1763,6 +1993,99 @@ export default function VaultView() {
                       </div>
                     </div>
                   )}
+
+                  {/* Process Steps Section */}
+                  <div className="border-t border-white/5 pt-3 flex flex-col gap-3 shrink-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] uppercase font-bold text-white/40 tracking-wider">Process Steps Workflow</span>
+                      <span className="text-[9px] text-[#ff9f0a] font-bold">({noteSteps.length} Steps)</span>
+                    </div>
+
+                    {/* Step entry inputs */}
+                    <div className="bg-white/3 border border-white/5 rounded-xl p-3 flex flex-col gap-2.5">
+                      <input
+                        type="text"
+                        value={newStepTitle}
+                        onChange={e => setNewStepTitle(e.target.value)}
+                        placeholder="Step Title (e.g. Rule Configuration)"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-white/30 outline-none focus:border-amber-500/40"
+                      />
+                      <textarea
+                        value={newStepText}
+                        onChange={e => setNewStepText(e.target.value)}
+                        placeholder="Step details and instructions..."
+                        rows={2}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-white/30 outline-none focus:border-amber-500/40 resize-none"
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-1.5">
+                          {['#ff9f0a', '#ef4444', '#3b82f6', '#10b981', '#a855f7'].map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setNewStepColor(c)}
+                              className={`w-3.5 h-3.5 rounded-full border ${newStepColor === c ? 'border-white scale-110' : 'border-transparent'}`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newStepTitle.trim()) {
+                              showToast('Step requires a title');
+                              return;
+                            }
+                            const newStep = {
+                              id: crypto.randomUUID(),
+                              title: newStepTitle,
+                              text: newStepText,
+                              color: newStepColor
+                            };
+                            setNoteSteps(prev => [...prev, newStep]);
+                            setNewStepTitle('');
+                            setNewStepText('');
+                            showToast('Step added to workflow');
+                          }}
+                          className="bg-amber-500/10 border border-[#ff9f0a]/30 text-[#ff9f0a] px-2.5 py-1 rounded-lg text-[9px] font-bold hover:bg-amber-500/20"
+                        >
+                          + Add Step
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Added steps workflow list */}
+                    {noteSteps.length > 0 && (
+                      <div className="flex flex-col gap-2 max-h-36 overflow-y-auto pr-1">
+                        {noteSteps.map((step, idx) => (
+                          <div 
+                            key={step.id} 
+                            className="bg-white/2 border border-white/5 rounded-xl p-2.5 flex items-start justify-between gap-2.5"
+                          >
+                            <div className="flex gap-2">
+                              <span 
+                                className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[9px] font-bold text-black font-mono mt-0.5"
+                                style={{ backgroundColor: step.color }}
+                              >
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <h5 className="text-[11px] font-bold text-white leading-tight">{step.title}</h5>
+                                {step.text && <p className="text-[9px] text-white/50 mt-0.5 leading-relaxed">{step.text}</p>}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setNoteSteps(prev => prev.filter(s => s.id !== step.id))}
+                              className="text-red-400 hover:text-red-300 text-[10px] font-bold mt-0.5 shrink-0"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Apple Notes styled Mock formatting toolbar at bottom */}
                   <div className="border-t border-white/5 pt-3 mt-1 flex items-center justify-between text-white/40 shrink-0">

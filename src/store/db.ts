@@ -34,6 +34,13 @@ export interface Attachment {
   dataUrl: string; // Base64 encoding
 }
 
+export interface NoteStep {
+  id: string;
+  title: string;
+  text: string;
+  color: string;
+}
+
 export interface SecureNote {
   id: string;
   title: string;
@@ -49,6 +56,7 @@ export interface SecureNote {
   isLocked: boolean;
   passwordHash?: string;
   attachments: Attachment[];
+  steps?: NoteStep[];
   reminderTime?: number; // timestamp
   createdAt: number;
   updatedAt: number;
