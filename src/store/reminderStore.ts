@@ -438,17 +438,34 @@ export const reminderStore = {
     updateState({ secureNotes: updatedNotes });
   },
 
-  updateSecureNote: async (id: string, title: string, body: string) => {
+  updateSecureNote: async (id: string, updates: Partial<Omit<SecureNote, 'id' | 'createdAt' | 'updatedAt'>>) => {
     const note = state.secureNotes.find(n => n.id === id);
     if (note) {
       const now = Date.now();
       const updatedNote: SecureNote = {
         ...note,
-        title,
-        body,
+        ...updates,
         updatedAt: now
       };
       await dbSaveSecureNote(updatedNote);
+      const updatedNotes = await dbGetAllSecureNotes();
+      updateState({ secureNotes: updatedNotes });
+    }
+  },
+
+  duplicateSecureNote: async (id: string) => {
+    const note = state.secureNotes.find(n => n.id === id);
+    if (note) {
+      const newId = crypto.randomUUID();
+      const now = Date.now();
+      const newNote: SecureNote = {
+        ...note,
+        id: newId,
+        title: `${note.title} (Copy)`,
+        createdAt: now,
+        updatedAt: now
+      };
+      await dbSaveSecureNote(newNote);
       const updatedNotes = await dbGetAllSecureNotes();
       updateState({ secureNotes: updatedNotes });
     }
@@ -508,6 +525,7 @@ export function useReminderStore() {
     addSecureNote: reminderStore.addSecureNote,
     deleteSecureNote: reminderStore.deleteSecureNote,
     updateSecureNote: reminderStore.updateSecureNote,
+    duplicateSecureNote: reminderStore.duplicateSecureNote,
     resetVault: reminderStore.resetVault,
   };
 }

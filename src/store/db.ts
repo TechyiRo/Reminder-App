@@ -27,10 +27,29 @@ export interface VaultEntry {
   updatedAt: number;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  type: 'image' | 'pdf' | 'voice' | 'draw' | 'file';
+  dataUrl: string; // Base64 encoding
+}
+
 export interface SecureNote {
   id: string;
   title: string;
   body: string;
+  category: string; // e.g. SonicWall Firewall, Personal
+  description?: string;
+  tags: string[];
+  isFavorite: boolean;
+  isPinned: boolean;
+  isArchived: boolean;
+  isTrash: boolean;
+  colorLabel?: string; // e.g. hex color or color name
+  isLocked: boolean;
+  passwordHash?: string;
+  attachments: Attachment[];
+  reminderTime?: number; // timestamp
   createdAt: number;
   updatedAt: number;
 }
@@ -45,6 +64,8 @@ export class LuminaDatabase extends Dexie {
 
   constructor() {
     super('LuminaRemindersDB');
+    
+    // Previous schema definitions maintained for migration history
     this.version(3).stores({
       reminders: 'id, date, time, completed, triggered, category, priority',
       users: 'id',
@@ -52,6 +73,11 @@ export class LuminaDatabase extends Dexie {
       backups: '++id, createdAt, version',
       vault_entries: 'id, siteName, username, createdAt',
       secure_notes: 'id, title, createdAt'
+    });
+
+    // Version 4 upgraded tables with indexed fields for notes search/sort
+    this.version(4).stores({
+      secure_notes: 'id, title, category, isFavorite, isPinned, isArchived, isTrash, createdAt, updatedAt'
     });
   }
 }
